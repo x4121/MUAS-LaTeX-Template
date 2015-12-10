@@ -13,4 +13,4 @@
 
 * Aktuell nur beamer-Template
 * Output
-  [[beispiel-output/presentation.pdf]]
+  [[beispiel-output/presentation.png]]
