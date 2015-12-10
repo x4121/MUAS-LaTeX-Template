@@ -1,0 +1,143 @@
+% Created 2015-12-10 Do 22:49
+\documentclass[t,compress,11pt,xcolor=dvipsnames]{beamer}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{fixltx2e}
+\usepackage{graphicx}
+\usepackage{longtable}
+\usepackage{float}
+\usepackage{wrapfig}
+\usepackage{rotating}
+\usepackage[normalem]{ulem}
+\usepackage{amsmath}
+\usepackage{textcomp}
+\usepackage{marvosym}
+\usepackage{wasysym}
+\usepackage{amssymb}
+\usepackage{hyperref}
+\tolerance=1000
+\input{inc/header.tex}
+\usetheme{default}
+\author{Armin Grodon}
+\date{10.12.2015}
+\title{Präsentationstemplate\\ mit Zeilenumbruch im Titel}
+\hypersetup{
+  pdfkeywords={LaTeX beamer presentation MUAS HM munich},
+  pdfsubject={LaTeX-Template für die Hochschule München},
+  pdfcreator={Emacs 24.5.1 (Org mode 8.2.10)}}
+\begin{document}
+
+\maketitle
+\input{inc/toc.tex}
+
+
+\section{Erste Section}
+\label{sec-1}
+\subsection{Erster Unterpunkt}
+\label{sec-1-1}
+\begin{frame}[label=sec-1-1-1]{Slide 1}
+\begin{columns}
+\begin{column}{0.6\textwidth}
+Slide mit Text und einem Bild
+\begin{itemize}
+\item Fußnoten in Slides mit mehreren Columns zu bekommen
+ist etwas hässlich\footnotemark[1]
+\item Man hat sie entweder in der Column in der sie benutzt werden
+\begin{itemize}
+\item oder muss sie selbst platzieren
+\item in einer eigenen Column
+\end{itemize}
+\item \emph{Alternativ verzichtet man auf Fußnoten in solchen Layouts}
+\item Aber man sollte sich für eine Art von Fußnoten entscheiden
+\end{itemize}
+\pnote{Notes für pdfpc}
+\pnote{Keine Zeilenumbrüche in pnote-Element!}
+\end{column}
+\begin{column}{0.4\textwidth}
+\begin{figure}[htb]
+\centering
+\includegraphics[width=0.8\textwidth]{./img/cat.jpg}
+\caption{Eine Katze\footnotemark[2]!}
+\end{figure}
+\end{column}
+\end{columns}
+\footnotetext[1]{Persönlicher Eindruck vom benötigten inline-LaTeX-Code}
+\footnotetext[2]{\url{https://commons.wikimedia.org/wiki/File:So_happy_smiling_cat.jpg}}
+\end{frame}
+\subsection{Zweiter Unterpunkt}
+\label{sec-1-2}
+\begin{frame}[label=sec-1-2-1]{Slide 2}
+Slides mit nur Text sind dafür \alert{sehr} übersichtlich
+
+\begin{center}
+\begin{tabular}{l|lcl|lr|}
+ & A & B &  & C & D\\
+\hline
+chicken\footnotemark & Q & Q &  &  & \\
+ & QQQQQQ & Q &  & x & xxxx\\
+ &  & QQ &  &  & x\\
+ &  & QQQ &  & x & xx\\
+\hline
+chicken chicken & Q & QQQQ &  & x & x\\
+ &  &  &  &  & x\\
+\end{tabular}
+\end{center}\footnotetext[1]{Tabellen auch}
+\end{frame}
+
+\begin{frame}[fragile,label=sec-1-2-2]{Slide 3}
+ \begin{block}{Column 1}
+Text in einer Column\footnote{Footnote in einer Column}
+\end{block}
+\begin{block}{Column 2}
+\begin{verbatim}
+a^2 * b^2 = c^2
+\end{verbatim}
+\end{block}
+\end{frame}
+\subsection{Dritter Unterpunkt}
+\label{sec-1-3}
+\begin{frame}[label=sec-1-3-1]{Slide 4}
+Org-Mode-Fußnoten stimmen auch nicht mehr,
+wenn man zusätzlich Inline-\LaTeX{}-Fußnoten verwendet\footnote{Keine Ahnung, wie man das lösen kann}
+\end{frame}
+\begin{frame}[label=sec-1-3-2]{Slide 5}
+Columns können auch ohne Überschrift und Rahmen verwendet werden\\
+     "`Text in Quotes"'\footnote{Footnote mit Name}
+\begin{itemize}
+\item A\footnote{Anonyme Fußnote}
+\item B\footnote{Inline Fußnote}
+\end{itemize}
+\footnotetext[1234]{Fußnote an total falscher Stelle\footnotemark[10]}
+\footnotetext[10]{Von Hand gesetzte Fußnoten sind richtig nervig zu verwalten}
+\end{frame}
+\section{Zweite Section}
+\label{sec-2}
+\subsection{Unterpunkt}
+\label{sec-2-1}
+\begin{frame}[label=sec-2-1-1]{}
+\begin{itemize}
+\item Seitenzahlen auf \emph{appendix}-Slides entfernen
+\item Quellen schöner machen
+\item Fußnotenproblem lösen
+\item Weniger Zeit mit \LaTeX"" verschwenden
+\end{itemize}
+\end{frame}
+\section{Letze Section}
+\label{sec-3}
+\subsection{Letzer Unterpunkt}
+\label{sec-3-1}
+\begin{frame}[label=sec-3-1-1]{Letzte Slide}
+Alles danach ist nicht mehr im TOC
+\end{frame}
+\appendix
+Quellen:
+\tiny\begin{itemize}
+\item \url{https://commons.wikimedia.org/wiki/File:So_happy_smiling_cat.jpg}
+\item The Internet
+\item
+\item
+\item
+\end{itemize}
+\small\centering Vielen Dank für die Aufmerksamkeit
+% Emacs 24.5.1 (Org mode 8.2.10)
+\end{document}
