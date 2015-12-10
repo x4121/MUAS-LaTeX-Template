@@ -12,3 +12,5 @@
           und keine Notizen für pdfpc haben.
 
 * Aktuell nur beamer-Template
+* Output
+  [[beispiel-output/presentation.pdf]]
