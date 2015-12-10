@@ -1,0 +1,62 @@
+\usepackage[ngerman]{babel}
+\usepackage{url}
+\usepackage{pdfpcnotes}
+\usepackage[bars]{beamerthemetree} %Beamer theme v 2.2
+\usepackage{kerkis}
+\usepackage{multimedia}
+
+\definecolor{HMRed}{RGB}{211, 3, 48}
+\usecolortheme[named=HMRed]{structure}
+\usefonttheme[onlymath]{serif}
+\setbeamercovered{highly dynamic}
+\usetheme{Ilmenau} % Beamer theme v 3.0
+\useoutertheme[subsection=true]{smoothbars}%Beamer Outer Theme-circles on top
+\useinnertheme{circles} %rectangle bullet points instead of circle ones
+
+% beamer stuff (font sizes and colors)
+\setbeamerfont{section in toc}{size=\small}
+\setbeamerfont{subsection in toc}{size=\footnotesize}
+\setbeamerfont{footnote}{size=\tiny}
+\setbeamerfont{caption}{size=\tiny}
+\setlength\abovecaptionskip{-5pt}
+\setbeamerfont{alerted text}{series=\bfseries}
+\setbeamercolor{alerted text}{fg=HMRed}
+
+% hide navigation bar
+\usenavigationsymbolstemplate{}
+% current frame number in ilmenau
+\newcommand*\oldmacro{}%
+\let\oldmacro\insertshorttitle%
+\renewcommand*\insertshorttitle{%
+    \oldmacro\hfill%
+\insertframenumber\,}%/\,\inserttotalframenumber
+
+% footnotes in brackets
+% distinguish between exponents
+\renewcommand*{\thefootnote}{(\arabic{footnote})}
+
+% institution title and logo
+\institute{Hochschule München}
+\logo{%
+    \makebox[0.95\paperwidth][r]{%
+        \includegraphics[width=1cm,height=1cm,keepaspectratio]{img/hm_edu.jpg}~%
+    }%
+}
+
+% toc for every section
+% title page for every section
+\AtBeginSection[]{
+    % Looks nice, but not very helpfull
+    % \begin{frame}
+    % \vfill
+    % \centering
+    % \begin{beamercolorbox}[sep=8pt,center,rounded=true]{title}
+    %   \usebeamerfont{title}\insertsectionhead\par%
+    % \end{beamercolorbox}
+    % \vfill
+    % \end{frame}
+    \begin{frame}
+        \frametitle{\insertsectionhead}
+        \tableofcontents[currentsection]
+    \end{frame}
+}

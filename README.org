@@ -1,0 +1,15 @@
+#+TITLE:       LaTeX-Template für die Hochschule München
+#+AUTHOR:      Armin Grodon
+#+EMAIL:       me@armingrodon.de
+
+* Benötigt
+  - *Org mode*
+        - [[http://orgmode.org/manual/]]
+        - Gibt's auch für vim[fn:1]
+  - *pdfpc-latex-notes*
+        - [[https://github.com/cebe/pdfpc-latex-notes]]
+        - Alternativ die \pnote{}-Blöcke löschen
+          und keine Notizen für pdfpc haben.
+
+* Footnotes
+[fn:1] [[https://github.com/x4121/vim-orgmode]]

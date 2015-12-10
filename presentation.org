@@ -1,0 +1,126 @@
+#+TITLE:       Präsentationstemplate\\ mit Zeilenumbruch im Titel
+#+AUTHOR:      Armin Grodon
+#+EMAIL:       me@armingrodon.de
+#+DATE:        10.12.2015
+#+DESCRIPTION: LaTeX-Template für die Hochschule München
+#+KEYWORDS:    LaTeX beamer presentation MUAS HM munich
+#+LANGUAGE:    de
+
+#+STARTUP: beamer
+#+STARTUP: oddeven
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [t,compress,11pt,xcolor=dvipsnames]
+# H: Tiefe der Sections pro Frame
+# toc:nil - nicht generieren (ist sonst mit Titel "Contents")
+# toc:t   - TOC TODO
+#+OPTIONS: H:3 toc:nil
+#+COLUMNS: %20ITEM %13BEAMER_env(Env) %6BEAMER_envargs(Args) %4BEAMER_col(Col) %7BEAMER_extra(Extra)
+
+#+LaTeX_HEADER: \input{inc/header.tex}
+#+LaTeX: \input{inc/toc.tex}
+
+
+* Erste Section
+** Erster Unterpunkt
+*** Slide 1
+**** Content
+     :PROPERTIES:
+     :BEAMER_col: 0.6
+     :END:
+     Slide mit Text und einem Bild
+     - Fußnoten in Slides mit mehreren Columns zu bekommen
+       ist etwas hässlich\footnotemark[1]
+     - Man hat sie entweder in der Column in der sie benutzt werden
+            - oder muss sie selbst platzieren
+            - in einer eigenen Column
+     - /Alternativ verzichtet man auf Fußnoten in solchen Layouts/
+     - Aber man sollte sich für eine Art von Fußnoten entscheiden
+     #+LaTeX: \pnote{Notes für pdfpc}
+     #+LaTeX: \pnote{Keine Zeilenumbrüche in pnote-Element!}
+**** Bild
+     :PROPERTIES:
+     :BEAMER_col: 0.4
+     :END:
+     #+CAPTION: Eine Katze\footnotemark[2]!
+     #+ATTR_LATEX: :width 0.8\textwidth
+     [[file:./img/cat.jpg]]
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[1]{Persönlicher Eindruck vom benötigten inline-LaTeX-Code}
+     #+LaTeX: \footnotetext[2]{\url{https://commons.wikimedia.org/wiki/File:So_happy_smiling_cat.jpg}}
+** Zweiter Unterpunkt
+*** Slide 2
+    Slides mit nur Text sind dafür *sehr* übersichtlich
+
+    |                 | A      | B    |   | C |    D |
+    |-----------------+--------+------+---+---+------|
+    | /               | <      |      |   | < |    > |
+    |                 |        | <c>  |   |   |  <r> |
+    | chicken[fn:1]   | Q      | Q    |   |   |      |
+    |                 | QQQQQQ | Q    |   | x | xxxx |
+    |                 |        | QQ   |   |   |    x |
+    |                 |        | QQQ  |   | x |   xx |
+    |-----------------+--------+------+---+---+------|
+    | chicken chicken | Q      | QQQQ |   | x |    x |
+    |                 |        |      |   |   |    x |
+
+*** Slide 3
+**** Column 1
+     Text in einer Column[fn:2]
+**** Column 2
+     #+name: codeexample
+     #+begin_src test :results output :export both
+     a^2 * b^2 = c^2
+     #+end_src
+** Dritter Unterpunkt
+*** Slide 4
+    Org-Mode-Fußnoten stimmen auch nicht mehr,
+    wenn man zusätzlich Inline-LaTeX-Fußnoten verwendet[fn:3]
+*** Slide 5
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     Columns können auch ohne Überschrift und Rahmen verwendet werden\\
+     "`Text in Quotes"'[fn:quote]
+     - A[fn:: Anonyme Fußnote]
+     - B[fn:B: Inline Fußnote]
+**** NichtAngezeigterName
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[1234]{Fußnote an total falscher Stelle\footnotemark[10]}
+     #+LaTeX: \footnotetext[10]{Von Hand gesetzte Fußnoten sind richtig nervig zu verwalten}
+* Zweite Section
+** Unterpunkt
+*** TODO
+    - Seitenzahlen auf /appendix/-Slides entfernen
+    - Quellen schöner machen
+    - Fußnotenproblem lösen
+    - Weniger Zeit mit \LaTeX"" verschwenden
+* Letze Section
+** Letzer Unterpunkt
+*** Letzte Slide
+    Alles danach ist nicht mehr im TOC
+*** Quellen
+    :PROPERTIES:
+    :BEAMER_env: appendix 
+    :END:
+    Quellen:
+    #+LaTeX: \tiny\begin{itemize}
+    #+LaTeX: \item \url{https://commons.wikimedia.org/wiki/File:So_happy_smiling_cat.jpg}
+    #+LaTeX: \item The Internet
+    #+LaTeX: \item
+    #+LaTeX: \item
+    #+LaTeX: \item
+    #+LaTeX: \end{itemize}
+    #+LaTeX: \small\centering Vielen Dank für die Aufmerksamkeit
+
+* Footnotes
+  [fn:1]:
+[fn:1] Tabellen auch
+[fn:2] Footnote in einer Column
+[fn:3] Keine Ahnung, wie man das lösen kann
+[fn:quote] Footnote mit Name
