@@ -95,7 +95,7 @@
      #+LaTeX: \footnotetext[10]{Von Hand gesetzte Fußnoten sind richtig nervig zu verwalten}
 * Zweite Section
 ** Unterpunkt
-*** TODO
+*** TODO:
     - Seitenzahlen auf /appendix/-Slides entfernen
     - Quellen schöner machen
     - Fußnotenproblem lösen

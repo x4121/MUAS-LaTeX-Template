@@ -2,15 +2,52 @@
 #+AUTHOR:      Armin Grodon
 #+EMAIL:       me@armingrodon.de
 
-* Benötigt
+[[beispiel-output/presentation.pdf][beispiel-output/presentation.png]]
+
+* Was?
+  - Ein in org-mode und LaTeX geschriebenes Template
+    für wissenschaftliche Arbeiten an der Hochschule München
+  - Work in progress
+* Warum?
+  - Weil es keine offizielle Vorlage gibt
+  - Weil mich alle bisher gesehenen Vorlagen nicht angesprochen haben
+* Für wen?
+  - Studenten der Hochschule München
+  - Leute, die bereits LaTeX beherrschen
+    (Ein großer Teil ist in org-mode geschrieben,
+    allerdings kommt das Template nicht ohne LaTeX-Code aus)
+  - Leute, die org-mode beherrschen
+    oder zumindest ein paar Stunden in das Lernen investieren würden
+    (der Ordner [[beispiel-output]] enthält allerdings
+    auch das erzeugte LaTeX-Dokument)
+  - Leute, die ein formal richtiges und optisch ansprechendes Layout wollen
+    und dafür auch gerne Zeit investieren
+* Für wen nicht?
+  - Leute, denen alles außer Powerpoint/Word oder Prezi zu viel Aufwand ist
+  - Leute, die ein fertiges und fehlerfreies Template ohne Aufwand wollen
+    (das hier ist noch nicht fertig und ihr müsst vermutlich die ein
+    oder andere Änderung selber schreiben)
+* Was wird benötigt?
   - *Org mode*
         - [[http://orgmode.org/manual/]]
         - Gibt's auch für vim ([[https://github.com/x4121/vim-orgmode]])
   - *pdfpc-latex-notes*
         - [[https://github.com/cebe/pdfpc-latex-notes]]
-        - Alternativ die \pnote{}-Blöcke löschen
-          und keine Notizen für pdfpc haben.
-
-* Aktuell nur beamer-Template
-* Output
-  [[beispiel-output/presentation.png]]
+        - Alternativ auf die \pnote{}-Blöcke verzichten
+          und keine generierten Notizen für pdfpc haben.
+* Was geht aktuell schon?
+** Beamer präsentation
+   - Schreiben des Inhalts in org-mode
+   - PDF-Generierung mit nur einem Befehl aus emacs/vim
+   - Fußnoten mit inline-LaTeX
+   - Abbildungen, Tabellen und Code ohne LaTeX
+   - Generierung der Notizen für pdfpc mit inline-LaTeX
+* Was geht noch nicht?
+** Ausarbeitung
+   - Template für eine Ausarbeitung kommt Ende Dezember oder Anfang Januar
+** Beamer präsentation
+   - Fußnoten müssen in vielen Fällen in inline-LaTeX geschrieben werden,
+     eventuell lässt sich das besser lösen.
+   - Notizen für pdfpc lassen sich nicht in org-mode schreiben.
+     Lässt sich vermutlich auch nicht so leicht beheben.
+   - Seitenzahlen in appendix-Slides sind falsch
