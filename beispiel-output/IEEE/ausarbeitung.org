@@ -1,0 +1,203 @@
+#+TITLE:          Verbesserung und Beibehaltung der Qualität bestehender Software mit Docker
+#+AUTHOR:         Armin Grodon\\ \small Hochschule für Angewandte Wissenschaften München\\ \small me@armingrodon.de
+#+EMAIL:          me@armingrodon.de
+#+DATE:           06.01.2016
+#+LANGUAGE:       de
+#+OPTIONS:        H:3 toc:nil ^:{}
+
+#+LaTeX_CLASS: ieee
+#+LaTeX_CLASS_OPTIONS: [12pt,conference,koma]
+#+LaTeX_HEADER: \input{header.inc.tex}
+
+#+BEGIN_latex
+\begin{acronym}[LONGEST]
+  \acro{SOA}{Service Oriented Architecture}
+\end{acronym}
+#+END_latex
+
+#+BEGIN_abstract
+Ähnlich der Entropie in der Thermodynamik,
+entwickelt sich auch
+Software mit der Zeit von einem qualitativ hochwertigen,
+geordneten, hin zu einem qualitativ minderwertigen,
+ungeordneten, Zustand.
+Sei es indirekt, durch den wachsenden Qualitätsanspruch
+an Effizienz und Funktionalität, oder direkt,
+durch nachträgliche Änderungen an der Software.
+
+Ziel dieser Forschungsarbeit ist es zu untersuchen,
+ob und wie die Qualität von Software mit der
+Virtualisierungs- und Isolierungs-Software Docker
+verbessert oder zumindest beibehalten werden kann.
+
+Dafür sollen zwei Methoden mit unterschiedlichen Grundgedanken entwickelt,
+an bestehender Softwareprojekten getestet und untereinander
+sowie gegen die ursprüngliche Entwicklung verglichen werden.
+Durch die gesammelten Ergebnisse soll gezeigt werden,
+für welche Art von Softwareprojekten sich welche Methode
+am besten eignet.
+#+END_abstract
+
+* Einleitung
+  Oft ist es in Unternehmen der Fall,
+  dass bestehende Software im Einsatz ist,
+  deren ursprüngliche Entwickler das Unternehmen
+  bereits verlassen haben.
+  Besonders bei wenig dokumentierter und nicht handwerklich
+  erstellter Software, können dadurch eine Vielzahl von Problemen entstehen.
+
+  Muss die Software erweitert oder ein Fehler behoben werden,
+  besteht die Gefahr, stattdessen weitere Fehler hinzuzufügen.
+
+  Durch diese Gefahr und den Wegfall der Wartbarkeit solcher
+  Projekte werden diese oft auch komplett neu entwickelt.
+  Aber auch hierfür müssen erst einmal finanzielle sowie
+  personelle Mittel zur Verfügung stehen.
+
+  Allgemein wäre es also wünschenswert,
+  wenn sich bestehende Software in einer isolierten
+  Umgebung weiterentwickeln ließe,
+  ohne dabei die bestehende Qualität zu gefährden.
+  Zu diesem Zweck würde sich die Software Docker,
+  oder allgemein vergleichbare Container-Systeme,
+  sehr gut anbieten.
+  Durch den, im Vergleich zu Virtuellen Maschinen,
+  sehr geringen Overhead[[cite:binet2015docker]] und
+  die gute Portierbarkeit,
+  sind diese besonders bei Unit-Tests
+  durch kürzere Test-Zeiten weit überlegen.
+  \\
+  \\
+  Als sehr vielversprechend erscheinen dabei die
+  Herangehensweisen, bestehende Software
+  in einer isolierten und testbaren Umgebung
+  weiterzuentwickeln oder in der bestehenden
+  Form zu isolieren und als Microservice in eine
+  \ac{SOA} einzubetten.
+  
+* Stand der Forschung
+  Da Docker eine sehr neue und schnell wachsende
+  Software ist, gibt es in diesem Bereich eine
+  Vielzahl aktueller Forschungsprojekte und -arbeiten.
+  Die meisten dieser Arbeiten befassen sich allerdings
+  mit den Themen "DevOps"[[cite:devops]] und "Deployment"[[cite:deploy]],
+  also eher dem Bereitstellen von Systemen und
+  dem Ausspielen und Verteilen von Programmen.
+  Dies hilft in sofern indirekt, dass dadurch die allgemeine
+  Reife und Qualität von Docker an sich beleuchtet wird.
+  Auch wurde bereits viel im ebenfalls sehr aktuellen
+  Bereich \ac{SOA}[[cite:container,soa]]
+  geforscht.
+  Auch hier ist die Einsicht sehr hilfreich,
+  in welchen Arten von Projekten sich eine \ac{SOA} besonders oder
+  eher weniger anbietet.
+  Diese Themengebiete betrachten zwar den Einsatz von Containern,
+  allerdings nicht im Kontext der Software Maintenance.
+
+  Zwei Arbeiten, die eher in diese Richtung gehen befassen sich
+  mit der Reproduzierbarkeit von Forschung[[cite:repro]] und
+  dem Testen von Software mit Docker[[cite:test]].
+  Diese Arbeiten beleuchten aber auch lediglich wieder nur
+  Teilbereiche, die hohe Reproduzierbarkeit und Parallelisierbarkeit
+  von Softwaretests mit Docker.
+  Der Einfluss auf die Qualität wird dabei nicht betrachtet.
+
+* Ziele und Arbeitsprogramm
+  In diesem Abschnitt wird das Ziel des Forschungsprojekts,
+  sowie die Aufteilung des Arbeitsprogramms beleuchtet.
+
+** Voraussichtliche Dauer und Kosten des Projekts
+   Da sich das Projekt in sehr vielen Themenbereich gleichzeitig
+   bewegt (Docker/Container, \ac{SOA} und Software Maintenance) wird
+   für die Literaturrecherche in Tabelle [[ref:tab_t]] auch ein verhältnismäßig
+   hoher Zeitaufwand veranschlagt.
+
+   #+CAPTION: Zeitplanung label:tab_t
+   #+ATTR_LATEX: :environment tabularx :align Xr :width \linewidth
+   | *Tätigkeit*                   | *Dauer in Monaten* |
+   |-------------------------------+--------------------|
+   | Literaturrecherche            | 3,0                |
+   | Erarbeitung der Methoden      | 2,0                |
+   | Test in Kontrollgruppen       | 3,0                |
+   | Auswertung der Ergebnisse     | 0,5                |
+   | Zusammenfassung in Empfehlung | 1,0                |
+   |-------------------------------+--------------------|
+   | *Summe*                       | *9,5*              |
+   
+   Nach der Entwicklung der beiden Referenz-Methoden ist der
+   nächste größere Block das vergleichsweise Testen dieser
+   in möglichst ähnlichen Kontrollgruppen an verschiedenen
+   Softwareprojekten.
+
+   Die Ergebnisse dieser Tests sollen anschließend von den
+   Probanden gesammelt und ausgewertet werden.
+   Diese Informationen sollen abschließend zusammengefasst
+   werden, mit dem Ziel, eine Empfehlung geben zu können,
+   für welche Art von Projekt sich welche Methode am Besten
+   eignet.
+
+   Dadurch ergibt sich die in Tabelle ref:tab_t angegebene
+   Gesamtdauer von 9,5 Monaten.
+   
+   #+CAPTION: Kostenplanung label:tab_m
+   #+ATTR_LATEX: :environment tabularx :align Xr :width \linewidth
+   | *Posten* | *Kosten*    |
+   |----------+-------------|
+   | Personal | 91.875 €    |
+   | Hardware | 10.000 €    |
+   | Labor    | 20.000 €    |
+   |----------+-------------|
+   | *Summe*  | *121.875 €* |
+
+   Die Personalkosten in Tabelle ref:tab_m setzt sich aus
+   einer Vollzeitstelle über den
+   gesamten Forschungszeitraum (9,5 Monate, je 3500 €),
+   10 Teilzeitkräfte für die Kontrollgruppen (3 Monate,
+   je 1750 €) sowie einer Teilzeitkraft für die Mithilfe
+   bei der Betreuung der Tests und der Auswertung der
+   Ergebnisse (3,5 Monate, je 1750 €) zusammen.
+
+   Zusätzlich muss für die Forschungsarbeit ein Labor und
+   für den Zeitraum der Tests ein zusätzlicher Laborraum und
+   Hardware angemietet werden.
+   
+** Ziele
+   Die Forschungsarbeit hat das Ziel zwei verschiedene
+   Herangehensweisen zu Betreiben und Weiterentwickeln
+   bestehender Software zu entwickeln,
+   diese gegeneinander zu testen und eine Empfehlung zu geben,
+   für welche Art von Softwareprojekt welche Art von Methode
+   geeignet ist.
+
+*** Gesicherte Weiterentwicklung
+    Die erste Methode lehnt sich an das Prinzip der Unit Tests
+    und Test Driven Development an. Die bestehende Software
+    soll in einem Docker Container isoliert und eine Spezifikation
+    von Unit Tests gegen diesen Container geschrieben werden.
+    Die Unit Tests beschreiben dabei das Verhalten der gesamten
+    Software als Black Box und stellen die Korrektheit der Software,
+    auch über die Weiterentwicklung hinweg, sicher.
+
+*** Gekapselte Weiterentwicklung
+    Die zweite Methode baut auf das Prinzip der \ac{SOA} auf.
+    Die bestehende Software wird ebenfalls in einem Docker Container
+    isoliert, allerdings anschließend nicht weiterentwickelt.
+    Stattdessen wird die Software in eine \ac{SOA} eingebettet und
+    zusätzliche Funktionen als neue Microservices implementiert.
+
+*** Test
+    In den Kontrollgruppen soll durch Code Reviews,
+    eine Zufriedenheitsbefragung der Teilnehmer und die Messung der
+    Implementierungsdauer und -güte ermittelt werden,
+    wie gut sich das getestete Verfahren für die gegebene
+    Software eignet.
+    Dies soll durch die Auswahl verschiedener Projekte 
+    Größe, Komplexität) geschehen.
+
+*** Empfehlung
+    Aus den Testergebnissen soll abschließend eine Empfehlung
+    erstellt werden, ob und welche der beiden Methoden sich
+    besonders gut für welche Art von Softwareprojekt eignet.
+    
+bibliography:refs.bib
+bibliographystyle:ieeetr
