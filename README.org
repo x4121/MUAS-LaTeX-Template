@@ -69,4 +69,4 @@
   - [[beispiel-output/Hauptseminar/fpbrooks.pdf][Hauptseminar - Ausarbeitung]]
   - [[beispiel-output/Hauptseminar/presentation.pdf][Hauptseminar - Präsentation]]
   - [[beispiel-output/IEEE/ausarbeitung.pdf][IEEE conference paper]]
-  - [[beispiel-output/SichereSysteme][Praktikums-Ausarbeitung]]
+  - [[beispiel-output/SichereSysteme/docu.pdf][Praktikums-Ausarbeitung]]
