@@ -16,7 +16,7 @@
 #+OPTIONS: H:3 toc:nil
 #+COLUMNS: %20ITEM %13BEAMER_env(Env) %6BEAMER_envargs(Args) %4BEAMER_col(Col) %7BEAMER_extra(Extra)
 
-#+LaTeX_HEADER: \input{inc/header.tex}
+#+LaTeX_HEADER: \input{inc/header.pres.tex}
 #+LaTeX: \input{inc/toc.tex}
 
 
@@ -29,7 +29,7 @@
      :END:
      Slide mit Text und einem Bild
      - Fußnoten in Slides mit mehreren Columns zu bekommen
-       ist etwas hässlich\footnotemark[1]
+       ist etwas hässlich\footnote[frame]{Persönlicher Eindruck vom benötigten inline-LaTeX-Code}
      - Man hat sie entweder in der Column in der sie benutzt werden
             - oder muss sie selbst platzieren
             - in einer eigenen Column
@@ -41,15 +41,14 @@
      :PROPERTIES:
      :BEAMER_col: 0.4
      :END:
-     #+CAPTION: Eine Katze\footnotemark[2]!
+     #+CAPTION: Eine Katze\footnotemark!
      #+ATTR_LATEX: :width 0.8\textwidth
      [[file:./img/cat.jpg]]
 **** Marks
      :PROPERTIES:
      :BEAMER_env: ignoreheading
      :END:
-     #+LaTeX: \footnotetext[1]{Persönlicher Eindruck vom benötigten inline-LaTeX-Code}
-     #+LaTeX: \footnotetext[2]{\url{https://commons.wikimedia.org/wiki/File:So_happy_smiling_cat.jpg}}
+     #+LaTeX: \footnotetext{\url{https://commons.wikimedia.org/wiki/File:So_happy_smiling_cat.jpg}}
 ** Zweiter Unterpunkt
 *** Slide 2
     Slides mit nur Text sind dafür *sehr* übersichtlich

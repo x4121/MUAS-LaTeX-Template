@@ -2,6 +2,8 @@
 .#*
 /*.tex
 *.aux
+*.bbl
+*.blg
 *.log
 *.nav
 *.out
