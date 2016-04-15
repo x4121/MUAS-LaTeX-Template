@@ -1,0 +1,42 @@
+(require 'package)
+(push '("marmalade" . "http://marmalade-repo.org/packages/")
+    package-archives )
+(push '("melpa" . "http://melpa.milkbox.net/packages/")
+    package-archives)
+
+(setq package-list '(org-ref))
+
+(package-initialize)
+
+(unless package-archive-contents
+  (package-refresh-contents))
+
+(dolist (package package-list)
+  (unless (package-installed-p package)
+    (package-install package)))
+
+(setq org-latex-pdf-process
+      '("pdflatex -interaction nonstopmode -output-directory %o %f" 
+	"bibtex %b"
+	"pdflatex -interaction nonstopmode -output-directory %o %f" 
+	"pdflatex -interaction nonstopmode -output-directory %o %f"))
+
+(require 'org-ref)
+(require 'org-ref-latex)
+(require 'org-ref-pdf)
+(require 'org-ref-url-utils)
+(require 'ox-latex)
+
+(add-to-list 'org-latex-classes
+             '("ieee"
+               "\\documentclass[11pt,conference]{IEEEtran}"
+               ("\\section{%s}" . "\\section*{%s}")
+               ("\\subsection{%s}" . "\\subsection*{%s}")
+               ("\\subsubsection{%s}" . "\\subsubsection*{%s}")))
+
+(setq org-latex-listings 'listings)
+(setq org-latex-listings-options
+    '(("frame" "lines")
+      ("basicstyle" "\\footnotesize\\ttfamily")
+      ("numbers" "left")
+      ("numberstyle" "\\tiny")))

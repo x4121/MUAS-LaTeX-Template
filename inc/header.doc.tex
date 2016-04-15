@@ -1,0 +1,34 @@
+\usepackage[ngerman]{babel}
+\usepackage[nolist]{acronym}
+\usepackage{hyperref}
+\usepackage{multimedia}
+\usepackage{graphicx}
+\usepackage{colortbl}
+\usepackage{listings}
+\usepackage{tabularx}
+\usepackage{courier}
+\usepackage{eurosym}
+
+% break urls at "\", "-" and "_"
+\def\UrlBreaks{\do\/\do-\do_}
+
+% don't use parindent
+\setlength{\parindent}{0mm}
+
+% footnotes in brackets
+% distinguish between exponents
+\renewcommand*{\thefootnote}{(\arabic{footnote})}
+
+% no keyword highlighting
+\lstset {
+    keywordstyle=\ttfamily
+}
+
+% use correct euro symbol
+\DeclareUnicodeCharacter{20AC}{\euro}
+
+\newcommand\RowOdd{\rowcolor[gray]{.9}}
+
+\newcolumntype{C}{>{\centering\arraybackslash}X}
+\newcolumntype{B}[1]{>{\hsize=#1\hsize}X}
+\newcolumntype{L}[1]{>{\raggedright\hsize=#1\hsize}X}

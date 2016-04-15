@@ -1,0 +1,1273 @@
+﻿* Einleitung
+  Neben dem Monitoring Daemon zur Akquirierung von Daten und dem ELK Stack
+  (Elasticsearch, Logstash und Kibana) ist das Dashboard eine weitere zentrale
+  Komponente des Systems SichHeimMonitor.
+  \\
+  Abbildung [[ref:abb_grob]] zeigt einen ersten groben Entwurf der Systemarchitektur,
+  der in den folgenden Abschnitten um Details ergänzt und verfeinert wird.
+
+  #+CAPTION: Erster Entwurf der Systemarchitektur label:abb_grob
+  #+ATTR_LATEX: :placement [H] :width 0.5\textwidth
+  [[./placht/images/grob.png]]
+  | *orange* | Port          |
+  | *gelb*   | Prozess/Datei |
+
+* Funktionale Anforderungen
+  Die in Java entwickelte Webapplikation soll die folgenden funktionalen
+  Anforderungen besitzen:
+
+  #+ATTR_LATEX: :environment tabularx :align l|X :width \linewidth
+  | *Funktionale* |                                                                                                                                                        |
+  | *Anforderung* | *Beschreibung*                                                                                                                                         |
+  |---------------+--------------------------------------------------------------------------------------------------------------------------------------------------------|
+  | FA01\RowOdd   | Der Zugriff auf die Applikation soll über ein gesichertes, offenes und standardisiertes Protokoll erfolgen.                                            |
+  | FA02          | Die Applikation soll über einen Bereich verfügen der nur für authentifizierte und autorisierte Benutzer zugänglich ist.                                |
+  | FA03\RowOdd   | Die Applikation soll es Benutzern ermöglichen, eine  Browser Session zu starten, in der keine Daten erhoben werden und beim Beenden vernichtet werden. |
+  | FA04          | Die Applikation soll in der Lage sein, sowohl lokale Systemparameter, als auch entfernte Dienste zu Überwachen.                                        |
+  | FA05\RowOdd   | Die Applikation soll in der Lage sein, laufende Docker Container anzuzeigen und diese zu steuern (Starten, Stoppen, Neustarten)                        |
+  | FA06          | Die Applikation soll in der Lage sein, die Anzahl der versuchten Logins zu speichern.                                                                  |
+
+* Sicherheitskritische Punkte der Architektur
+
+  Aus den funktionalen Anforderungen und dem ersten Entwurf der Architektur ergeben
+  sich die folgenden Sicherheitskritischen Punkte der Anwendung:
+
+  #+ATTR_LATEX: :environment tabularx :align l|X :width \linewidth
+  | *Problem*  | *Beschreibung*                                          |
+  |------------+---------------------------------------------------------|
+  | P01\RowOdd | Große Angriffsfläche durch unterschiedliche Komponenten |
+  | P02        | Keine Authentifizierung innerhalb der Applikation       |
+  | P03\RowOdd | Keine Autorisierung innerhalb der Applikation           |
+  | P04        | Verwendung unsicherer Kommunikation                     |
+  | P05\RowOdd | Keine Authentifizierung an der Datenbank (Redis)        |
+  | P06        | Datenbank unterstützt keine verschlüsselte Speicherung  |
+
+* Maßnahmen und Lösungen
+
+  Für mögliche Lösungen werden die in der Schutzbedarfserstellung definierten
+  Maßnahmen zugrunde gelegt.
+
+  #+ATTR_LATEX: :environment tabularx :align l|X :width \linewidth
+  | *Maßnahme* | *Beschreibung*                                      |
+  |------------+-----------------------------------------------------|
+  | M01\RowOdd | Verschlüsselte Datenübertragung                     |
+  | M02        | Verschlüsselte Speicherung der Daten                |
+  | M03\RowOdd | Signierte Datenübertragung                          |
+  | M04        | Benutzerauthentifizierung über OAuth                |
+  | M05\RowOdd | Replizierung wichtiger Dienste                      |
+  | M06        | Härtung und Konfiguration der einzelnen Komponenten |
+
+  Betrachtet man nun die funktionalen Anforderungen zusammen mit den Kritischen Punkten
+  und den Maßnahmen der Schutzbedarfsfestellung ergeben sich die folgenden Lösungen:
+
+  #+ATTR_LATEX: :environment tabularx :align l|X :width \linewidth
+  | *Lösung*   | *Beschreibung*                                                                         |
+  |------------+----------------------------------------------------------------------------------------|
+  | L01\RowOdd | Isolation und Härtung der Anwendung durch Verwendung von Docker                        |
+  | L02        | Authentifizierung gegenüber github.com mittels OAuth                                   |
+  | L03\RowOdd | Autorisierung durch Nutzung der github.com Funktionalität von Organisationen und Teams |
+  | L04        | Die Kommunikation der Anwendung erfolgt über HTTPS                                     |
+  | L05\RowOdd | Authentifizierung an der Datenbank                                                     |
+  | L06        | Verschlüsselte Speicherung der akquirierten Daten                                      |
+
+* Architektur label:arch
+  Der folgende Abschnitt beschreibt die verfeinerte Architektur des Systems unter
+  Berücksichtigung der im vorherigen Abschnitt ermittelten Probleme und Lösungen
+
+  #+CAPTION: Verfeinerter Entwurf der Systemarchitektur label:abb_arch2
+  #+ATTR_LATEX: :placement [H] :width 0.5\textwidth
+  [[./placht/images/arch2.png]]
+
+  | *blau*   | Docker Container |
+  | *orange* | Port             |
+  | *gelb*   | Prozess/Datei    |
+
+** L01 Isolation und Härtung der Anwendung durch Verwendung von Docker
+   Der folgende Abschnitt beschreibt die sichere Konfiguration der einzelnen Komponenten
+   aus dem vorherigen Abschnitt. Dabei wird nicht auf globale Sicherheitskonzepte des
+   Betriebssystems (z.b. Firewall, verschlüsseltes Dateisystem, etc...) eingegangen,
+   sondern nur auf Konzepte auf Applikationsebene.
+
+*** *Sichere Konzepte für alle Komponenten*
+    \\
+    Der folgende Abschnitt gibt einen Überblick über Konzepte die für alle Komponenten (Tomcat und Redis)
+    verwendet wurden.
+
+**** *Verwenden einer stabilen Version*
+     \\
+     Es wurde sichergestellt, dass eine stabile Version der jeweiligen Komponente verwendet wurde.
+     Eine stabile Version ist in der Regel die Version die über keine bekannten Sicherheitslücken
+     verfügt und ausreichend getestet wurde.
+     \\
+     Um über eventuelle Schwachstellen informiert zu werden, sollte man sich auf
+     der entsprechenden Mailingliste registrieren und im Ernstfall Sicherheitsupdates
+     installieren.
+     \\
+     Von der Verwendung der aktuellsten Version wird in der Regel abgeraten, da diese weniger
+     getestet und anfälliger für Sicherheitslücken sind.
+
+**** *Dedizierten Benutzer und Gruppe verwenden*
+     \\
+     Für den Betrieb der Komponenten sollte ein eigener Benutzer und
+     eine dedizierte Linuxgruppe mit minimalen Berechtigungen verwendet werden.
+     \\
+     Der Besitzer des Installationsverzeichnis sollte der dedizierte Benutzer und die
+     Gruppe sein.
+
+**** *Deployment als Docker Container*
+    \\
+     Obwohl es nicht zwingend erforderlich ist, werden die Komponenten aus Abschnitt [ref:arch]
+     innerhalb eines Docker Containers bereitgestellt. Dies hat
+     gegenüber einer herkömmlichen Installation, folgende Vorteile:
+
+     - Rapid application deployment:
+     Container beinhalten in der Regel nur die minimal
+     benötigten Abhängigkeiten zur Laufzeit, was zu einer reduzierten Größe und einem
+     schnelleren deployment führt.
+
+     - Portabilität:
+     Eine Anwendung und all ihre Abhängigkeiten können in einem einzelnen
+     Container zusammengeführt werden, der unabhängig ist vom Host des Containers.
+     Der Container kann auf andere Systeme, auf denen ebenfalls Docker läuft, transferiert
+     und ausgeführt werden, ohne das Kompatibilitätsprobleme entstehen.
+
+     - Isolation:
+    Docker Container laufen unabhängig voneinander in einer eigenen Sandbox. Der
+    Zugriff auf andere Container erfolgt über definierte Schnittstellen.
+
+     - Versionskontrolle:
+     Container können versioniert sein, so dass es einfach möglich ist,
+     Änderungen nachzuvollziehen und bei Bedarf rückgängig zu machen.
+
+     - Teilen von Container:
+    Docker bietet die Möglichkeit, Container in Remote Repositories mit anderen
+    zu teilen und so wiederzuverwenden.
+
+*** *Absicherung von nginx*
+    \\
+    Für nginx wird auf den in Abschnitt [ref:nginx] beschriebenen Docker Container
+    des ELK Stack zurückgegriffen.
+
+*** *Absicherung von Redis*
+    \\
+    Der folgende Abschnitt bietet einen Überblick über die sichere Konfiguration von
+    Redis. Die einzelnen Punkte beziehen sich größtenteils auf die offizielle
+    Installationsanleitung [[cite:redis_doc]]
+
+**** *Eingeschränkter Zugriff*
+    \\
+     Redis ist so konzipiert, das der Zugriff von vertrauenswürdigen Clients innerhalb
+     einer vertrauenswürdigen Umgebung erfolgen sollte. Es ist deshalb in der Regel
+     nicht empfehlenswert, Redis direkt über das öffentliche Netz verfügbar zu machen.
+     \\
+     Um dies zu erreichen wird Redis als Docker Container bereitgestellt und der Port
+     nicht nach außen freigegeben.
+     Dadurch ist es möglich, dass nur andere Docker Container mit der Datenbank kommunizieren können.
+     \\
+     Eine weitere Möglichkeit besteht darin, den Zugriff auf ein bestimmtest Netzwerkinterface
+     zu beschränken. Dazu ist der folgende Eintrag in der Datei redis.conf notwendig.
+     #+BEGIN_src sh
+bind 127.0.0.1
+     #+END_src
+     \\
+     Aufgrund der dynamischen IP Zuweisung von Docker und der Tatsache dass die Redis
+     Konfiguration keine Subnetze verwalten kann, wird der erste Weg umgesetzt.
+
+**** *Authentifizierung*
+    \\
+     Redis besitzt kein Access Control Feature (z.B. über Rollen und Rechte),
+     allerdings eine optionale Konfiguration zur Authentifizierung.
+     Sobald die Konfiguration aktiviert ist, verweigert Redis die Funktionalität
+     für nicht authentifizierte Clients.
+     \\
+     Ein Client kann sich authentifizieren, in dem er das vom Administrator gesetzte
+     Passwort übermittelt. Da Redis auf Geschwindigkeit bei der Verarbeitung von
+     Anfragen optimiert ist, sollte das Passwort lange genug sein, um nicht mittels
+     Brute Force Angriff geknackt werden kann.
+     \\
+     Der folgende Eintrag ist hierfür in der redis.conf notwendig:
+     #+BEGIN_src sh
+requirepass e2f7ef60-9c24-11e5-8994-feff819cdc9f
+     #+END_src
+
+**** *Ausschalten nicht benötigter Kommandos*
+      \\
+     Redis bietet eine Vielzahl von Kommandos, die entweder komplett deaktiviert werden
+     oder umbenannt werden können. Ein gefährlicher Befehl ist z.B. FLUSHALL
+     welcher die komplette Datenbank löscht.
+     Um einen Befehl umzubenennen ist folgender Eintrag in der Datei redis.conf
+     notwendig:
+     #+BEGIN_src sh
+rename-command FLUSHALL \
+   b840fc02d524045429941cc15f59e41cb7be6c52
+     #+END_src
+     \\
+     Danach ist der Befehl FLUSHALL nur noch über\\ b840fc02d524045429941cc15f59e41cb7be6c52
+     ausführbar.
+     \\
+     Will man den Befehl komplett deaktivieren muss folgendes in die Konfiguration
+     eingetragen werden
+     #+BEGIN_src sh
+rename-command FLUSHALL ""
+     #+END_src
+     \\
+     Neben dem Befehl FLUSHALL wurden keine weiteren Kommandos deaktiviert.
+
+**** *Dockerfile*
+      \\
+     Listing ref:fig_redis_docker zeigt das Dockerfile zur Erzeugung eines auf Alpine Linux basierendem Docker
+     Image dass die im vorherigen Abschnitt beschriebene Konfiguration umsetzt.
+
+     #+CAPTION: Dockerfile label:fig_redis_docker
+     #+BEGIN_src Dockerfile
+FROM alpine:3.2
+MAINTAINER Tobias Placht <info@tobiasplacht.de>
+RUN \
+apk add --update build-base linux-headers
+
+RUN addgroup redis && \
+adduser -S redis && \
+adduser redis redis
+RUN \
+cd /tmp && \
+wget http://download.redis.io/redis-stable.tar.gz && \
+tar xvzf redis-stable.tar.gz && \
+cd redis-stable && \
+make && \
+make install && \
+mkdir -p /etc/redis && \
+rm -rf /tmp/redis-stable*
+COPY config/redis.conf /etc/redis/redis.conf
+RUN mkdir /data && touch /data
+RUN chown -R redis:redis /data
+VOLUME ["/data"]
+WORKDIR /data
+USER redis
+CMD ["redis-server", "/etc/redis/redis.conf"]
+     #+END_src
+     Dabei wird ausgehend von Alpine Linux, zunächst die zur Kompilierung von Redis
+     benötigten Compiler und Linux-Kernel-Header installiert.
+     \\
+     Anschließend wird ein unprivilegierter Benutzer samt zugehöriger Gruppe erstellt
+     und die stabile Version von Redis aus dem Quellcode installiert.
+     \\
+     Als letzter Schritt werden definierte Konfigurationsdateien an die benötige Stelle
+     kopiert und die Berechtigungen gesetzt.
+     \\
+     Mittels dem Befehl
+     #+BEGIN_src sh
+     docker build -t cs.hm.edu.shm.redis .
+     #+END_src
+     wird das Image erzeugt und mit dem Tag cs.hm.edu.shm.redis zur weiteren Verwendung
+     versehen.
+
+*** *Absicherung von Tomcat* label:tomcat
+    \\
+    Der folgende Abschnitt bietet einen Überblick über die sichere Konfiguration von
+    Tomcat. Dabei wird nach dem Artikel Securing Tomcat der OWASP vorgegangen.
+    [[cite:owasp_tomcat]]
+
+**** *Entfernen nicht benötigter Features*
+     \\
+     Tomcat kommt standardmäßig mit zusätzlichen, in der Regel nicht benötigter Features,
+     um die Administration zu vereinfachen. Dabei handelt es sich um die in der nachfolgend
+     angegebenen Tabelle:
+
+     #+ATTR_LATEX: :environment tabularx :align l|Xl :width \linewidth
+     | *Name*              | *Beschreibung*                                                   | *Benötigt* |
+     |---------------------+------------------------------------------------------------------+------------|
+     | DOCS\RowOdd         | Serverdokumentation                                              | nein       |
+     | EXAMPLES            | Ausführbare Beispielprojekte                                     | nein       |
+     | HOST-MANAGER\RowOdd | Graphische Verwaltung virtueller Hosts                           | nein       |
+     | MANAGER             | Graphischer Verwaltung der Java Applikationen der Server Instanz | nein       |
+     | ROOT\RowOdd         | Beispielapplikation                                              | nein       |
+     \\
+     Durch jede weitere Applikation erhöht sich die potenzielle Angriffsfläche, die
+     verwendeten Ressourcen und der Wartungsaufwand.
+     Ebenfalls kritisch, ist der Umstand, dass die Funktionen in der Standardeinstellung
+     alle den selben Benutzernamen und Passwort verwenden.
+     \\
+     Um die nicht benötigten Funktionen zu entfernen, müssen folgende Verzeichnisse und Dateien entfernt
+     werden. CATALINA_HOME bezeichnet dabei den Ordner, in dem Tomcat installiert wurde.
+     #+BEGIN_src sh
+rm -rf CATALINA_HOME/webapps/*
+rm -rf CATALINA_HOME/server/webapps/*
+rm -rf CATALINA_HOME/conf/Catalina/localhost/host-manager.xml
+rm -rf CATALINA_HOME/conf/Catalina/localhost/manager.xml
+     #+END_src
+
+**** *Entfernen der Versionsnummer aus Fehlerseiten*
+      \\
+      In der Standardeinstellung, enthalten Tomcat Fehlerseiten, die Versionsnummer des Server.
+      Dieses Verhalten erhöht die Angriffsfläche, da so gezielt nach
+      Exploits und Schwachstellen gesucht werden kann, die für diese Version bekannt sind.
+      \\
+      Um das Verhalten zu ändern, muss die Datei org/apache/catalina/util/ServerInfo.properties
+      wie folgt angepasst werden.:
+      #+BEGIN_src sh
+vorher: server.info=Apache Tomcat 8.30
+      #+END_src
+
+      #+BEGIN_src sh
+nachher: server.info=Apache Tomcat
+      #+END_src
+
+**** *Ausschalten des Stacktrace*
+      \\
+      Die Standard Fehlerseite zeigt den Stacktrace der Java Applikation an. Um dieses
+      Verhalten zu unterbinden muss die Datei web.xml wie folgt
+      angepasst werden:
+      #+BEGIN_src xml
+<error-page>
+  <exception-type>java.lang.Throwable</exception-type>
+  <location>/error.jsp</location>
+</error-page>
+      #+END_src
+
+**** *Ersetzen des Server String*
+      \\
+      Es ist möglich, den HTTP Header anzupassen, den der Server als Antwort an eine
+      Anfrage sendet. Dazu muss die Datei server.xml wie folgt angepasst
+      werden. Anschließend identifiziert sich der Server dem Client nicht mehr als
+      Tomcat sondern Apache.
+      #+BEGIN_src xml
+<Connector port="8080" server="Apache" />
+      #+END_src
+
+**** *Absichern des Shutdown Ports*
+     \\
+     Es besteht die Möglichkeit, den Server über den Port 8005 herunterzufahren, indem
+     das Shutdown Command gesendet wird. In der Standardeinstellung ist der Befehl dazu
+     Shutdown. Es wird empfohlen das Kommando durch eine zufällige, schwer zu erratende Zeichenkette zu ersetzen
+     bzw. ganz zu entfernen.
+     \\
+     Zum ändern muss die server.xml wie folgt geändert werden:
+     #+BEGIN_src xml
+<Server port="8005" shutdown="ReallyComplexWord">
+     #+END_src
+
+     Zum entfernen muss die Datei CATALINA_HOME/conf/server.xml wie folgt geändert werden:
+
+     #+BEGIN_src xml
+<Server port="-1" shutdown="ReallyComplexWord">
+     #+END_src
+
+**** *Dockerfile*
+    \\
+    Listing ref:fig_docker_tomcat zeigt das Dockerfile zur Erzeugung eines auf Alpine Linux basierendem Docker
+    Image dass die im vorherigen Abschnitt beschriebene Konfiguration sicher stellt.
+
+    #+CAPTION: Dockerfile label:fig_docker_tomcat
+    #+BEGIN_src Dockerfile
+FROM java:8-jdk
+ENV CATALINA_HOME /usr/local/tomcat
+ENV PATH $CATALINA_HOME/bin:$PATH
+RUN mkdir -p "$CATALINA_HOME"
+WORKDIR $CATALINA_HOME
+RUN \
+gpg --keyserver pool.sks-keyservers.net --recv-keys\
+05AB33110949707C93A279E3D3EFE6B686867BA6 \
+07E48665A34DCAFAE522E5E6266191C37C037D42 \
+47309207D818FFD8DCD3F83F1931D684307A10A5 \
+541FBE7D8F78B25E055DDEE13C370389288584E7 \
+61B832AC2F1C5A90F0F9B00A1C506407564C17A3 \
+79F7026C690BAA50B92CD8B66A3AD3F4F22C4FED \
+9BA44C2621385CB966EBA586F72C284D731FABEE \
+A27677289986DB50844682F8ACB77FC2E86E29AC \
+A9C5DF4D22E99998D9875A5110C01C5A2F6059E7 \
+DCFD35E0BF8CA7344752DE8B6FB21E8933C60243 \
+F3A04C595DB5B6A5F1ECA43E3B7BBB100D811BBE \
+F7DA48BB64BCB84ECBA7EE6935CD23C10D498E23
+
+RUN groupadd tomcat
+RUN useradd -g tomcat -d $CATALINA_HOME tomcat
+
+ENV TOMCAT_MAJOR 8
+ENV TOMCAT_VERSION 8.0.30
+ENV TOMCAT_TGZ_URL https://www.apache.org/dist/tomcat/\
+    tomcat-$TOMCAT_MAJOR/v$TOMCAT_VERSION/bin/\
+    apache-tomcat-$TOMCAT_VERSION.tar.gz
+
+RUN set -x \
+&& curl -fSL "$TOMCAT_TGZ_URL" -o tomcat.tar.gz \
+&& curl -fSL "$TOMCAT_TGZ_URL.asc" -o tomcat.tar.gz.asc \
+&& gpg --verify tomcat.tar.gz.asc \
+&& tar -xvf tomcat.tar.gz --strip-components=1 \
+&& rm bin/*.bat \
+&& rm tomcat.tar.gz*
+
+# OWASP: Remove everything from WEBAPPS folder
+RUN ["rm", "-rf", "/usr/local/tomcat/webapps"]
+
+# OWASP: Remove Version String
+RUN cd $CATALINA_HOME/lib && \
+/usr/bin/jar xf catalina.jar \
+org/apache/catalina/util/ServerInfo.properties && \
+sed -i 's@Apache Tomcat/8.0.30@Apache Tomcat@' \
+org/apache/catalina/util/ServerInfo.properties && \
+/usr/bin/jar uf catalina.jar \
+org/apache/catalina/util/ServerInfo.properties && \
+rm -rf org/apache/catalina/util/ServerInfo.\
+propertiesorg/apache/catalina/util/ServerInfo.properties
+
+COPY dashboard-webapp-spark.war \
+/usr/local/tomcat/webapps/ROOT.war
+COPY keystore.jks /usr/local/tomcat/keystore.jks
+
+# OWASP Config
+RUN ["rm", "-rf", "/usr/local/tomcat/conf/server.xml"]
+COPY server.xml /usr/local/tomcat/conf/server.xml
+
+# OWASP Config
+RUN ["rm", "-rf", "/usr/local/tomcat/conf/web.xml"]
+COPY web.xml /usr/local/tomcat/conf/web.xml
+
+RUN chown -R tomcat:tomcat $CATALINA_HOME
+USER tomcat
+    #+END_src
+
+** L02/L03 Authentifizierung und Autorisierung
+   Da keine globale Authentifizierung vorhanden ist, die die einzelnen Projekte
+   nutzen können, wird für das Dashboard eine Authentifizierung gegenüber github.com implementiert.
+   Der Zugriff auf die API und die auf github.com hinterlegten Daten erfolgt mittels OAuth.
+   \\
+   Prinzipiell kann die Authentifizierung auch gegen andere Instanzen erfolgen,
+   allerdings ist kein in Deutschland angesiedelter Anbieter bekannt.
+   Wünschenswert wären vertrauenswürdige Instanzen beispielsweise Hochschulen oder
+   andere Deutsche Behörde, die sich an geltendes Recht, insbesondere Datenschutz,
+   halten.
+
+*** *OAuth*
+      \\
+     OAuth ist ein offenes, standardisiertes (RFC 6749)
+     Protokoll zur sicheren Autorisierung innerhalb von Desktop, Mobile und Web-Applikationen.
+     [[cite:oauth_spec]]
+     Die aktuelle Version ist 2.0, welche inkompatibel zum Vorgänger 1.0 ist.
+     \\
+     OAuth bietet Client-Applikationen, einen sicheren und delegierten Zugriff auf
+     Server Ressourcen im Auftrag des Ressourceneigentümers, ohne dem Client die
+     Zugangsdaten zur Verfügung zu stellen.
+     \\
+     OAuth wurde speziell für die Verwendung mit HTTP entwickelt. Zu den bekannten
+     OAuth Anbietern gehören Facebook, Google, GitHub und Twitter.
+     \\
+     Im Vergleich zur Basic Authentication mittels Benutzername und Passwort,
+     verwendet OAuth einen Token basierten Mechanismus, mit zwei entscheidenden
+     Vorteilen:
+     - Revocable Access: Der Zugriff kann jederzeit vom User widerrufen werden
+     - Limited Access: Benutzer können die Zugriffsrechte überprüfen, die ein Token
+       erhält, bevor sie eine Applikation autorisieren.
+
+*** *GitHub*
+    \\
+     GitHub ist ein Internet basierender git repository hosting Service. Neben den von
+     Git bekannten Funktionalitäten, bietet es weitere exklusive Features an.
+     \\
+     Stand 2015, besitzt GitHub über 11 Millionen Benutzer und über 29 Millionen
+     Git repostiories. Dadurch handelt es sich bei GitHub um den weltweit
+     größten Hoster der Welt.
+
+*** *GitHub API*
+    \\
+     Die aktuelle Version zum
+     Zeitpunkt dieses Dokumentes ist Version v3.
+     \\
+     Jeglicher Zugriff auf die API erfolgt über HTTPS über die URL api.github.com.
+     Sämtliche Daten werden dabei sowohl als JSON als gesendet und empfangen.
+     \\
+     #+BEGIN_src sh
+$ curl https://api.github.com/zen
+Practicality beats purity.
+     #+END_src
+     \\
+     GitHub stellt sowohl öffentliche Details (Avatar-url, Name, Location, etc...)
+     als auch private Informationen der einzelnen Benutzer über die API zur
+     Verfügung.
+     \\
+     #+BEGIN_src sh
+$ curl https://api.github.com/users/knacht
+     #+END_src
+     #+BEGIN_src json
+{
+  "login": "knacht",
+  "id": 1736327,
+  "avatar_url": \
+  "https://avatars.githubusercontent.com/u/1736327?v=3",
+  "gravatar_id": "",
+  ...
+  "type": "User",
+  "site_admin": false,
+  "name": "Tobias ",
+  "company": "HSWT",
+  "blog": null,
+  "location": "Munich, Germany",
+  "email": null,
+  "hireable": true,
+  "bio": null,
+  "public_repos": 7,
+  "public_gists": 1,
+  "followers": 2,
+  "following": 1,
+  "created_at": "2012-05-14T06:55:09Z",
+  "updated_at": "2015-11-07T12:14:07Z"
+}
+     #+END_src
+     \\
+     Sofern sich ein Benutzer mittels Basic Authentication oder OAuth autorisiert,
+     ist es möglich seine eigenen privaten Details zu empfangen.
+     \\
+     #+BEGIN_src json
+{ "private_gists": ,
+  "total_private_repos": ,
+  "owned_private_repos": ,
+  "disk_usage": ,
+  "collaborators": ,
+  "plan": {
+    "name": ,
+    "space": ,
+    "collaborators": ,
+    "private_repos":
+  }
+}
+     #+END_src
+     \\
+*** *Web Application Flow für Drittanbieter*
+      \\
+     Damit ein Drittanbieter (in diesem Falle SichHeimMonitor) Zugriff auf die Daten
+     eines GitHub Benutzers erhält muss er zunächst eine Applikation registrieren.
+     \\
+     #+CAPTION: Registrierung einer GitHub Application
+     #+ATTR_LATEX: :placement [H] :width 0.5\textwidth
+     [[./placht/images/register.png]]
+     \\
+     Anschließend wird der folgende Flow durchlaufen:
+     \\
+     #+CAPTION: GitHub Wep Application Flow label:abb_flow
+     #+ATTR_LATEX: :placement [H] :width 0.5\textwidth
+     [[./placht/images/flow.png]]
+     \\
+     Der Benutzer will sich innerhalb der Applikation einloggen.
+     Die Applikation leitet den Benutzer weiter an GitHub.
+     Dort gibt der Benutzer seinen Benutzernamen und Password ein und akzeptiert die
+     Berechtigungen.
+     GitHub antwortet mit einem temporären  Code, den die Applikation gegen einen
+     Token austauscht.
+     Mit diesem Token ist es dann möglich, die GitHub API zu benutzen bis:
+
+     1. Sich der Benutzer bei GitHub ausloggt
+     2. Der Benutzer den Token revidiert
+     3. Die Applikation weitere Rechte fordert
+
+*** *Autorisierung mithilfe von GitHub Organisation*
+  \\
+   GitHub.com ermöglicht es Benutzern, teil einer oder mehrerer Organisationen zu sein.
+   Die Organisationen eines Benutzers lassen sich über die API abfragen, sofern dieser
+   dem zugestimmt hat.
+   \\
+   Für das Projekt SichHeimMonitor wurde eine Organisation erstellt, in der sich
+   die Teammitglieder befinden.
+
+*** *Zugriffskontrolle*
+    \\
+    Zusammen mit der Authentifizierung und Autorisierung gegenüber github.com ist
+    innerhalb der Applikation, folgendes Rechtesystem realisiert:
+
+    1. Der Benutzer ist anonym, d.h. er ist nicht über github.com angemeldet.
+       Dadurch besteht nur die Möglichkeit, einen anonymen Tor Browser über Docker
+       zu starten, der nach dem Beenden des Fensters gelöscht wird.
+
+    2. Der Benutzer ist mit seinem github.com Account angemeldet und nicht Teil der
+       Organisation SichHeimMonitor.
+       Er besitzt dadurch eingeschränkten Zugriff und kann
+       innerhalb der Applikation, nur sein github.com Profil ansehen.
+
+    3. Der Benutzer ist mit seinem github.com Account angemeldet und Teil der
+       Organisation SichHeimMonitor.
+       Er besitzt dadurch vollen Zugriff und kann alle Funktionalitäten der
+       Applikation verwenden. Um Mitglied der Organisation zu werden, ist ein
+       persönliches Gespräch mit den bestehenden Mitglieder notwendig.
+       \\
+       Die beschriebene Zugriffskontrolle kann beliebig angepasst werden und dient nur
+       der Demonstration.
+
+** L04 Sichere Kommunikation durch HTTPS
+   Um Vertraulichkeit und Integrität während der Kommunikation zu gewährleisten,
+   erfolgt jegliche Kommunikation, sowohl innerhalb, als auch außerhalb des Systems
+   über HTTPS.
+   Abbildung ref:abb_arch3 zeigt die Stellen des Systems an denen einen sichere Kommunikation über
+   HTTPS statt finden soll.
+   \\
+   #+CAPTION: Architektur mit sicherer Kommunikation label:abb_arch3
+   #+ATTR_LATEX: :placement [H] :width 0.5\textwidth
+   [[./placht/images/arch3.png]]
+
+*** *Selbst signiertes HTTPS Zertifikat*
+    \\
+    Durch die Verwendung des in Abschnitt [ref:nginx] vorgestellten nginx ist sichergestellt,
+    dass der Tomcat Server nicht direkt erreichbar ist, sondern nur über eine HTTPS
+    Verbindung.
+    \\
+    Während der Entwicklung und für den Fall dass der Reverse Proxy ausfällt,
+    wurde mit OpenSSL ein selbst signiertes Zertifikat erstellt um die Kommunikation
+    über HTTPS zu gewährleisten.
+    \\
+    Dazu wird im ersten Schritt ein privater Schlüssel erzeugt.
+    Der Parameter aes256 legt dabei das zur Erzeugung verwendete Verschlüsselungsverfahren fest.
+    In diesem falle AES (Advanced Encryption Standard) mit einer Schlüssellänge von 256 Bit.
+    Der Parameter 4096 legt die Länge des privaten Schlüssels fest.
+    #+BEGIN_src sh
+openssl genrsa -aes256 -out server-key.pem 4096
+    #+END_src
+    Anschließend wird ein neues, selbst signiertes Zertifikat erstellt.
+    Der Parameter -days 365 gibt an wie lange das Zertifikat gültig ist. In diesem falle
+    also für ein Jahr.
+
+    #+BEGIN_src sh
+openssl req -new -x509 -days 365 -key server-key.pem \
+    -sha256 -out server.pem
+    #+END_src
+    Während der Erstellung können die folgenden Angaben gemacht werden:
+    #+BEGIN_src sh
+Country Name (2 letter code)
+State or Province Name (full name)
+Locality Name (eg, city)
+Organization Name (eg, company)
+Organizational Unit Name
+Common Name (e.g. server FQDN or YOUR name)
+Email Address []
+    #+END_src
+    Für die weitere Verwendung innerhalb von Tomcat muss das Zertifikat
+    in das PKCS12 Format umgewandelt werden. Dies ist ebenfalls mit OpenSSL möglich.
+    #+BEGIN_src sh
+openssl pkcs12 -export -out keystore.p12 \
+    -inkey server-key.pem -in server.pem
+    #+END_src
+    Zur Nutzung innerhalb des Tomcat Application Server muss ein Java Keystore erstellt
+    werden. Hierfür stellt Java das Programm keytool zur Verfügung. Der folgende Befehl
+    erzeugt einen neuen Keystore im JKS Format.
+    #+BEGIN_src sh
+keytool -importkeystore -destkeystore keystore.jks \
+    -srcstoretype PKCS12 -srckeystore keystore.p12
+    #+END_src
+
+    Als letzter Schritt muss noch ein Tomcat Connector konfiguriert werden.
+    Dieser benötigt den Port, den Keystore und das dazugehörige Passwort.
+    Listing label:tomcat_conn zeigt den relevanten Ausschnitt der Konfiguration.
+    Die verfügbaren Ciphers und das verwendete Protokoll folgen dabei der Empfehlung
+    der OWASP aus dem Artikel Securing Tomcat.
+    [[cite:owasp_tomcat]]
+    Dabei wurde eine Konfiguration mit geringerer Kompatibilität, aber erhöhter Sicherheit gewählt.
+    #+BEGIN_src xml label:tomcat_conn
+<Connector port="8443"
+  protocol="org.apache.coyote.http11.Http11NioProtocol"
+  maxThreads="150" SSLEnabled="true" scheme="https"
+  secure="true"
+  clientAuth="false" sslProtocol="TLSv1.2"
+  ...
+  server="Apache"
+  sslEnabledProtocols="TLSv1.2"
+  ciphers="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+  TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+  TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384,
+  TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384,
+  TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+  TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+  TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256,
+  TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256,
+  TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,
+  TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384,
+  TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+  TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384,
+  TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384,
+  TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA,
+  TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+  TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+  TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+  TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256,
+  TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256,
+  TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,
+  TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA" />
+    #+END_src
+
+*** *Kommunikation mit github.com*
+    \\
+    Die github.com API ist nur über HTTPS zu erreichen. Der für Tomcat konfigurierte Keystore
+    überschreibt den Standard Java Keystore der sonst implizit verwendet wird.
+    Deshalb ist es notwendig, den default keystore in seinen eigenen keystore zu importieren.
+    Dies erfolgt über das Java Keytool und dem folgenden Befehl.
+    #+BEGIN_src sh
+keytool -importkeystore \
+    -srckeystore /usr/java/jdk1.8.0_65/jre/lib/security/cacerts \
+    -destkeystore keystore.jks -srcstorepass changeit \
+    -deststorepass MySecretPassword
+    #+END_src
+    Anschließend erfolgt die Kommunikation über github.com bei Verwendung eines eigenen Keystores ebenfalls mit HTTPS
+    \\
+    Für den Fall dass github.com nicht verfügbar ist, besitzt die Applikation einen Fallback Modus, der der klassischen Basic
+    Authentication mit Benutzername und Passwort entspricht. Benutzername und Passwort sind nur den Administratoren bekannt.
+
+** L05 Signierte und verschlüsselte Kommunikation mit dem Docker Daemon
+   Docker verwendet eine Client-Server Architektur wie in Abbildung ref:abb_docker_c zu sehen.
+   #+CAPTION: Docker Client Server Modell label:abb_docker_c \footnotemark
+   #+ATTR_LATEX: :placement [H] :width 0.7\textwidth
+   [[./placht/images/docker_arch.png]]
+   #+LaTeX: \footnotetext{\url{https://docs.docker.com/engine/introduction/understanding-docker/}}
+   \\
+   In dieser kommuniziert der Docker Client mit dem Docker Daemon welcher die eigentliche Arbeit übernimmt.
+   Der Client und Server können entweder auf dem selben System oder zwei unterschiedlichen Systemen installiert sein.
+   Die Kommunikation zwischen Client und Server erfolgt entweder über Sockets oder RESTful API.
+   Um beispielsweise zu überprüfen, ob der Server erreichbar ist kann folgende GET Anfrage gesendet
+   \\
+   #+BEGIN_src sh
+GET /_sing
+   #+END_src
+   \\
+   Falls der Server erreichbar ist, erhält der Client folgende Antwort:
+   \\
+   #+BEGIN_src http
+HTTP/1.1 200 OK
+Content-Type: text/plain
+
+OK
+   #+END_src
+
+*** *Docker API konfigurieren*
+    \\
+    In der Standardeinstellung ist der Docker Daemon nur per UNIX Socket erreichbar.
+    Dies hat zur Folge, dass die API inkl. dem Client nur vom Benutzer root, bzw. Mitglieder
+    der Gruppe =docker= nutzbar ist.
+    Um die API für Java zugänglich zu machen, muss zunächst der Port freigegeben werden.
+    Mit folgendem Befehl, ist der Docker Daemon für jedermann per HTTP über den Port 4243 erreichbar.
+    #+BEGIN_src sh
+/usr/bin/docker daemon -H=0.0.0.0:4243
+    #+END_src
+    Diese Einstellung stellt eine extreme Sicherheitslücke dar und sollte unter keinen Umständen konfiguriert werden.
+    Dadurch ist es beispielsweise möglich, sich mittels der folgenden Abfrage
+    eine Liste aller Container zu erhalten und diese anschließend zu löschen.
+    #+BEGIN_src sh
+GET /containers/json?all=1
+    #+END_src
+
+*** *Docker API sicher konfigurieren*
+    \\
+    Es besteht die Möglichkeit, den Docker Server so zu konfigurieren, dass die Kommunikation
+    ausschließlich über HTTPS und zertifizierte Clients zugänglich ist.
+
+    Dazu muss im ersten Schritt, eine Certificate Authority(CA) erstellt werden. Dies kann ähnlich wie bei der
+    Konfiguration von Tomcat über OpenSSL erfolgen. Für die CA wird ein privater 4096 Bit AES 256 Schlüssel erzeugt.
+
+
+    #+BEGIN_src sh
+openssl genrsa -aes256 -out ca-key.pem 4096
+    #+END_src
+
+    Anschließend wird ein Zertifikat erstellt das mit dem privaten Schlüssel signiert ist.
+    #+BEGIN_src sh
+openssl req -new -x509 -days 365 -key ca-key.pem \
+    -sha256 -out ca.pem
+    #+END_src
+    Im nächsten Schritt wird ein Server Schlüssel und certifcate signing request erstellt, welche mit der CA signiert wird.
+    Dazu sind die folgenden SSL Befehle notwendig:
+
+    #+BEGIN_src sh
+# Server key erstellen
+openssl genrsa -out server-key.pem 4096
+# CSR erstellen
+openssl req -subj "/CN=$HOST" -sha256 -new \
+    -key server-key.pem -out server.csr
+# Erlaubte IP Adressen festlegen
+echo subjectAltName = IP:10.10.10.20,IP:127.0.0.1 > \
+    extfile.cnf
+# Server Key signieren
+openssl x509 -req -days 365 -sha256 -in server.csr \
+    -CA ca.pem -CAkey ca-key.pem \
+    -CAcreateserial -out server-cert.pem \
+    -extfile extfile.cnf
+    #+END_src
+
+    Für zertifizierte Clients ist ein ähnliches vorgehen notwendig. Da die Webapplikation,
+    der einzige Client ist, der mit dem Docker Daemon kommuniziert ist ein einzelnes Zertifikat ausreichend.
+    Das Client Zertifikat wurde wie folgt erstellt:
+
+    #+BEGIN_src sh
+# Client key erstellen
+openssl genrsa -out key.pem 4096
+# CSR erstellen
+openssl req -subj '/CN=client' -new \
+    -key key.pem -out client.csr
+# Client Authentication konfigurieren
+echo extendedKeyUsage = clientAuth > \
+    extfile.cnf
+# Client Key signieren
+openssl x509 -req -days 365 -sha256 \
+    -in client.csr -CA ca.pem \
+    -CAkey ca-key.pem \
+    -CAcreateserial -out cert.pem \
+    -extfile extfile.cnf
+    #+END_src
+    Mit einer Standard =umask= von 022 sind die privaten Schlüssel für jeden lesbar und veränderbar.
+    Um diese zu schützen werden die Zugriffsrechte wie folgt angepasst
+    #+BEGIN_src sh
+chmod -v 0400 ca-key.pem key.pem server-key.pem
+    #+END_src
+    Anschließend kann der Docker daemon mit den folgenden Parametern neu gestartet werden
+    #+BEGIN_src sh
+docker daemon --tlsverify --tlscacert=ca.pem \
+    --tlscert=server-cert.pem --tlskey=server-key.pem \
+    -H=0.0.0.0:2376
+    #+END_src
+    Danach erlaubt Docker nur noch Verbindungen von Clients die ein von der CA signiertes Zertifikat besitzen.
+    Sobald die Zertifikat basierte Authentifizierung aktiviert ist, benötigt Docker keine root rechte mehr.
+    Es ist deshalb darauf zu achten, dass Zertifikat wie ein Root Passwort zu betrachten und dementsprechend
+    damit umzugehen.
+    \\
+    Die Verbindung kann unter Linux beispielsweise mit Curl erfolgen:
+    #+BEGIN_src sh
+curl https://$HOST:2376/_ping \
+  --cert ~/.docker/cert.pem \
+  --key ~/.docker/key.pem \
+  --cacert ~/.docker/ca.pem
+    #+END_src
+
+*** *Docker Client Zertifikat unter Java benutzen*
+    \\
+    Um das im vorherigen Abschnitt erstellte Client Zertifikat unter Java zu benutzen, muss ein Trustore angelegt werden.
+    Dabei kann auf das =keytool= zurückgegriffen werden, welches schon zur Erstellung des Keystore für den Tomcat Server
+    verwendet wurde.
+    \\
+    Im ersten Schritt muss zunächst das als pem vorliegende Client Zertifikat in das PKCS12 Format umgewandelt werden.
+      \\
+    #+BEGIN_src sh
+openssl pkcs12 -export -out truststore.p12 \
+    -inkey key.pem -in cert.pem
+    #+END_src
+    \\
+    Anschließend müssen das Client Zertifikat, das Server Zertifikat und das CA in einen gemeinsamen trustore
+    importiert werden.
+    \\
+    #+BEGIN_src sh
+# Client Zertifikat importieren
+keytool -importkeystore -destkeystore truststore.jks \
+    -srcstoretype PKCS12 -srckeystore truststore.p12
+# Server Zertifikat importieren
+keytool -importcert -trustcacerts -file server-cert.pem \
+    -keystore truststore.jks
+# CA importieren
+keytool -importcert -trustcacerts -file ca.pem \
+    -keystore truststore.jks -alias ca
+    #+END_src
+    Um den so erzeugten Truststore zu benutzen, ist folgende Tomcat Konfiguration notwendig
+
+
+    #+BEGIN_src xml
+<Connector port="8443" \
+    protocol="org.apache.coyote.http11.Http11NioProtocol"
+    maxThreads="150" SSLEnabled="true" scheme="https"
+    secure="true"
+    clientAuth="false" sslProtocol="TLSv1.2"
+    keystoreFile="/usr/local/tomcat/keystore.jks"
+    keystorePass="MySecretPassword"
+    keystoreFile="/usr/local/tomcat/truststore.jks"
+    keystorePass="MyTrustStorePassword"
+    server="Apache"
+    sslEnabledProtocols="TLSv1.2"
+    ciphers="TLS_ECDHE_RSA_WITH_AES_256_GCM_SHA384,
+      TLS_ECDHE_ECDSA_WITH_AES_256_GCM_SHA384,
+      TLS_ECDH_RSA_WITH_AES_256_GCM_SHA384,
+      TLS_ECDH_ECDSA_WITH_AES_256_GCM_SHA384,
+      TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256,
+      TLS_ECDHE_ECDSA_WITH_AES_128_GCM_SHA256,
+      TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256,
+      TLS_ECDH_ECDSA_WITH_AES_128_GCM_SHA256,
+      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA384,
+      TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA384,
+      TLS_ECDHE_RSA_WITH_AES_256_CBC_SHA,
+      TLS_ECDHE_ECDSA_WITH_AES_256_CBC_SHA,
+      TLS_ECDH_RSA_WITH_AES_256_CBC_SHA384,
+      TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA384,
+      TLS_ECDH_RSA_WITH_AES_256_CBC_SHA,
+      TLS_ECDH_ECDSA_WITH_AES_256_CBC_SHA,
+      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256,
+      TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA256,
+      TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA,
+      TLS_ECDHE_ECDSA_WITH_AES_128_CBC_SHA,
+      TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256,
+      TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA256,
+      TLS_ECDH_RSA_WITH_AES_128_CBC_SHA,
+      TLS_ECDH_ECDSA_WITH_AES_128_CBC_SHA" />
+    #+END_src
+** L06 Verschlüsselte Speicherung der Login Daten
+   Für die Speicherung der akquirierten Daten wird auf das in Abschnitt [ref:redis] beschriebene Verfahren zurückgegriffen.
+
+** Implementierung
+   Der folgende Abschnitt gibt einen Überblick über ausgewählte Implementierungsdetails der Webapplikation.
+
+*** *Speicherung der Login versuche*
+    \\
+    Abbildung [ref:abb_index] zeigt die Indexseite die für jeden erreichbar ist.
+    #+CAPTION: Dashboard Index label:abb_index
+    #+ATTR_LATEX: :placement [H] :width 0.5\textwidth
+    [[./placht/images/dashboard/index.png]]
+    \\
+    Die Anzahl der Versuchten Logins wird mithilfe eines Sorted Sets in Redis gespeichert.
+    Bei einem sortiertem Redis Set handelt es sich um eine Sammlung von eindeutigen Strings die mit einem Score versehen werden können.
+    Existiert die Kombination aus Key und Member noch nicht, wird diese mit einem Score von 1 angelegt,
+    ansonsten der Score um den Wert 1 erhöht.
+    \\
+    Mit folgendem Befehl wird dem der Score, des Member "`one`" unter dem Key "`myzset`" um 1 erhöht.
+    #+BEGIN_src redis
+ZINCRBY myzset 1 "one"
+    #+END_src
+    \\
+    Nach einem Klick auf die Login Komponente wird ein Redis Sorted Set mit folgendem Key und Member
+    erstellt und in die Datenbank eingefügt.
+    \\
+    #+BEGIN_src sh
+# Key
+visits-by-url:/login:09-01-2016
+# Member
+16:05
+    #+END_src
+    Dazu dient der folgende Programmcode.
+    \\
+    #+BEGIN_src java
+@Override
+public void insertIntoCurrentHourAndMinute(String path) {
+    try (Jedis jedis =
+            JedisConnectionPool.INSTANCE.getResource()) {
+        jedis.zincrby(getKey(path), 1, getHourAndMinute());
+    }
+}
+
+private String getKey(String path) {
+    return PREFIX + path + ":" + getDate();
+}
+
+private String getDate() {
+    LocalDateTime now = LocalDateTime.now();
+    int year = now.getYear();
+    int month = now.getMonthValue();
+    int day = now.getDayOfMonth();
+    return String.format("%02d-%02d-%02d",
+        day, month, year);
+}
+
+private String getHourAndMinute() {
+    LocalDateTime now = LocalDateTime.now();
+    int hour = now.getHour();
+    int minute = now.getMinute();
+    return String.format("%02d:%02d",
+        hour, minute);
+}
+    #+END_src
+    \\
+    Der vordere Teil des Key ist statisch und lautet "visits-by-url".
+    Über den Parameter path der Methode getKey kann prinzipiell die zu überwachende
+    URL angegeben werden. Der letzte Teil des Keys ist das aktuelle Datum im Format
+    TT-MM-YYYY. Als Member dient die aktuelle Stunde und Minute im Format HH:MM
+    \\
+    Anschließend ist das Set in Redis wie folgt hinterlegt:
+    \\
+    #+BEGIN_src sh
+# Query for last five Member for Key
+# visits-by-url:/login:09-01-2016 with scores
+zrange visits-by-url:/login:09-01-2016 -1 -1 WITHSCORES
+ 1) "13:29"
+ 2) "2"
+    #+END_src
+    D.h. am 09.01.2016 erfolgten die meisten Zugriffe um 13:29, nämlich zwei Stück.
+
+*** *Abfrage und Visualisierung der versuchten Logins*
+    \\
+    Um die Zugriffe abzufragen, kann wie im vorherigen Abschnitt die Funktion zrange verwendet werden.
+    Mit den Parametern =start= und =end= kann festgelegt werden, wieviele Member abgefragt werden sollen.
+    \\
+    Um alle abzufragen ist folgender Befehlt notwendig
+    \\
+    #+BEGIN_src sh
+zrange visits-by-url:/login:09-01-2016 0 -1
+    #+END_src
+    \\
+    Um die Ergebnisse einzugrenzen, kann das Intervall von $START bis -1 erfolgen, wie in folgendem Programmcode zu sehen.
+    Dabei hat der Parameter Start den Wert -10, d.h. es werden die 10 häufigsten Zugriffe abgefragt.
+    Die Ergebnisse die als String vorliegen, werden abgebildet auf Objekte der Klasse TimeSeries.
+    Das Ergebnis wird anschließend anhand des Timestamp sortiert und in einer Liste gesammelt.
+    \\
+    #+BEGIN_src java
+@Override
+public List<TimeSeries> getTopTenMember(String path) {
+    try (Jedis jedis =
+            JedisConnectionPool.INSTANCE.getResource()) {
+        String key = getKey(path);
+        return jedis
+    .zrange(key, -10, -1)
+    .stream()
+    .map(s -> new TimeSeries(key + s,
+            jedis.zscore(key, s)))
+        .sorted((e1, e2) -> e1.getTimeStamp()
+        .compareTo(e2.getTimeStamp()))
+        .collect(Collectors.toList());
+    }
+}
+// Getter and setter ommited
+public class TimeSeries implements Serializable {
+
+private static final long serialVersionUID = 1L;
+
+private String timeStamp;
+
+private Double value;
+
+public TimeSeries(String timeStamp, Double value) {
+      this.timeStamp = timeStamp;
+      this.value = value;
+}
+    #+END_src
+    \\
+    Abbildung [[ref:abb_traffic]] zeigt die Anzahl der Login Versuche die mit einem Skript erzeugt wurden.
+
+    #+CAPTION: Visualisierung versuchter Logins label:abb_traffic
+    #+ATTR_LATEX: :placement [H] :width 0.7\textwidth
+    [[./placht/images/dashboard/traffic.png]]
+    \\
+    Die Datenstruktur ist so entwickelt, dass sie sowohl für weitere URLs als auch Zeiträume anwendbar ist.
+    Mit dem Redis Befehl ZUNIONSTORE ist es möglich einzelne Tage zu Monaten zu vereinen.
+    Konkret implementiert ist aktuell allerdings nur die Top 10 Daten für die URL Login.
+
+*** *Überwachen lokaler Systemparameter*
+    \\
+    Das Dashboard wird dazu verwendet um lokale Systemparameter des Hosts anzuzeigen.
+
+    #+CAPTION: Überwachung lokaler Systemparameter label:abb_overview
+    #+ATTR_LATEX: :placement [H] :width 0.75\textwidth
+    [[./placht/images/dashboard/overview.png]]
+    \\
+    Dazu wir auf dem Host der Monitoring Daemon mit folgender Konfiguration als Docker Container installiert:
+    \\
+    #+BEGIN_src sh
+# Monitoring server settings
+IP:mds
+Port: 9090
+
+# Monitoring configuration
+c#df -h | grep '^/dev/[hs]d' | \
+    awk '{s+=$2; p+=$3} END {print s, p}'#HDD#10000
+c#free | sed '1d' | sed '2d' | \
+    awk '{print $2, $3}'#RAM#2000
+c#mpstat -P ALL 1 1| sed '1,14d' | \
+    awk '{print $2, $12}'#CPU#2000
+    #+END_src
+    \\
+    Die Daten wurde vom Monitoring Daemon Server in Redis gespeichert und vom Dashboard
+    auf der Übersichtsseite abgefragt, ausgewertet und für die Visualisierung aufbereitet.
+    \\
+    Für die Implementierung wurden die folgenden drei Parameter mit den dazugehörigen Metriken definiert
+    #+ATTR_LATEX: :environment tabularx :align l|CCC :width \linewidth
+    |                                   | Status | Status  | Status   |
+    | Parameter                         | INFO   | WARNING | CRITICAL |
+    |-----------------------------------+--------+---------+----------|
+    | CPU Auslastung in Prozent\RowOdd  | < 80   | < 90    | > 90     |
+    | RAM Verbrauch in Prozent          | < 60   | < 70    | > 70     |
+    | Freier Speicher aller HDDs\RowOdd | < 80   | < 90    | > 90     |
+    \\
+    Der Folgende Codeausschnitt zeigt die Umsetzung der Metriken als Java Enum
+    \\
+    #+BEGIN_src java
+public enum LocalRating {
+
+    RAM("RAM", 60, 70),
+    CPU("CPU", 80, 90),
+    HDD("HDD", 80, 90);
+
+    LocalRating(String key,
+            int thresholdInfo,
+            int thresholdWarning) {
+        this.key = key;
+        this.thresholdInfo = thresholdInfo;
+        this.thresholdWarning = thresholdWarning;
+}
+    #+END_SRC
+    Mittels
+    \\
+    #+BEGIN_src java
+@Override
+public Set<String> getStatus(LocalRating status) {
+    String key = "";
+    try {
+        key = InetAddress.getLocalHost().getHostName()
+            + ":" + status.getKey();
+    } catch (UnknownHostException e) {
+  LOGGER.error("An error occured");
+    }
+    try (Jedis jedis =
+            JedisConnectionPool.INSTANCE.getResource()) {
+        return jedis.zrange(key, -1, -1);
+    }
+}
+    #+END_SRC
+    wird der Status aus der Datenbank abgefragt, und beispielsweise für den RAM wie folgt ausgewertet:
+    #+BEGIN_src java
+@Override
+public Object handle(Request request, Response response)
+        throws Exception {
+    String commandString = getCommand(LocalRating.RAM);
+
+    if (commandString.isEmpty()) {
+        return null;
+    }
+    Command command =
+        gson.fromJson(commandString, Command.class);
+    String result = command.getResult();
+    String[] splitted = result.split(" ");
+
+    long total = Long.parseLong(splitted[0]);
+    long used = Long.parseLong(splitted[1].trim());
+
+    long percentage = (used * 100) / total;
+
+    writeStatusIntoDb(LocalRating.RAM,command, percentage);
+
+    return new RamStatus(total, used);
+
+}
+    #+END_SRC
+    \\
+Der ausgewertete Wert wird in die Datenbank mit dem dazugehörigen Status gewertet und angezeigt
+
+*** *Kommunikation mit der Docker API*
+    \\
+    Das Dashboard ist in der Lage folgende Docker Informationen abzufragen:
+    - Auslesen der Docker Version
+    - Auslesen der Docker API Version
+    - Auslesen der Git Commit ID
+    - Auslesen der Go Version
+    - Auslesen des Host OS inkl. Architektur und Kernel Informationen
+    - Auflisten aller Images und dazugehörigen Details
+    - Auflisten aller Container und dazugehörigen Details inkl. laufender Prozessen
+    - Starten, Stoppen und Neustarten einzelner Container
+    \\
+    #+CAPTION: Übersicht Docker label:abb_dash_docker
+    #+ATTR_LATEX: :placement [H] :width 0.75\textwidth
+    [[./placht/images/dashboard/docker.png]]
+    \\
+    Die Informationen werden dabei über die abgesicherte API abgefragt und sind durch folgendes
+    Interface definiert:
+    \\
+    #+BEGIN_src java
+public interface DockerSerivce {
+
+    Set<DockerImage> findAllImages();
+
+    DockerVersion getDockerVersion();
+
+    String listProccesses(String id);
+
+    String getImageDetails(String id);
+
+    String getContainerDetails(String id);
+
+    List<DockerContainer>
+      findAllContainers(boolean isRunning);
+
+    int startContainer(String id);
+
+    int stopContainer(String id);
+
+    int restartContainer(String id);
+
+    int startTorBrowser();
+
+    String getDockerHostHostName();
+}
+    #+END_SRC
+    \\
+    Die dazugehörige Implementierung benutzt keinen der vorhanden Docker Java Libraries.
+    Stattdessen erfolgen die HTTPS Aufrufe über die Apache Commons HTTP library. \footnotemark
+    #+LaTeX: \footnotetext{\url{https://hc.apache.org/}}
+
+    Der Output wird mit GSON geparsed und angezeigt. \footnotemark
+    #+LaTeX: \footnotetext{\url{https://github.com/google/gson}}
+    \\
+    Der Folgende Codeabschnitt zeigt exemplarisch die Implementierung um alle Docker Images abzufragen.
+
+    Das JSON Ergebnis wird anschließend in Objekte der Klasse DockerImage serialisiert und ausgegeben wie in
+    Abbildung [[ref:abb_dash_docker]] zu sehen.
+    #+BEGIN_src java
+@Override
+public Set<DockerImage> findAllImages() {
+    try {
+        return gson.fromJson(EntityUtils.toString(
+            Request.Get(BASE_URL +
+                DockerEndpoint.IMAGES.getPath())
+                    .execute().returnResponse().getEntity()),
+            new TypeToken<Set<DockerImage>>() {
+            }.getType());
+    } catch (JsonSyntaxException |
+          ParseException | IOException e) {
+        LOGGER.error("An error occured",e);
+        return Collections.emptySet();
+    }
+
+}
+
+public class DockerImage implements Serializable {
+
+    private static final long serialVersionUID = 1L;
+
+    private String id;
+
+    private String parendId;
+
+    private Set<String> repoTags;
+
+    private Long created;
+
+    private Long size;
+
+    private Long virtualSize;
+}
+    #+END_SRC
+
+*** *Integrationstest mit dem Überwachungsserver*
+    \\
+    Das Softwaredesign und die Umsetzung des Dashboard entstand in enger Zusammenarbeit mit dem Monitoring Daemon.
+    Es wurden verschiedene Konfigurationen getestet und sowohl die Implementierungsdetails des Dashboard als auch des Daemon entsprechend angepasst.
+    \\
+
+** Fazit und Ausblick
+   Es wurde eine Webapplikation entwickelt, mit der sich sowohl die akquirieren Daten anzeigen, als auch bei Bedarf auswerten und bewerten lassen.
+   Der Fokus lag dabei auf Härtung und Isolation der einzelnen Komponenten mittels Docker, und der Sicherstellung der Vertraulichkeit und Integrität
+   der Kommunikation.
+   Auch wenn die funktionalen Anforderungen umgesetzt wurden, gibt es noch weitere Funktionen, die für zukünftige Versionen wünschenswert werden.
+
+   - Es war ursprünglich geplant, das Dashboard und die dazugehörigen Komponenten innerhalb von RancherOS zu deployen.
+   Aufgrund der folgenden technischen Probleme wurde, auf den Einsatz von RancherOS verzichtet:
+    - RancherOS wird aktiv weiterentwickelt und befindet sich in einer frühen Beta Phase.
+    - Während der Evaluierung, kam es immer wieder zu Abstürzen und Problemen, die in dem geforderten Zeitrahmen
+      nicht ausreichend behandelt werden konnten
+    - Für das Deployment aller Komponenten wird das in Abschnitt [[ref:compose]] vorgestellte Tool docker-compose verwendet.
+      Dieses wird aktuell von RancherOS nicht unterstützt.
+    Sobald RancherOS eine stabile Version erreicht, sollte es neu evaluiert werden und das deployment unter Umständen
+    angepasst werden.
+   - Die Autorisierung und Authentifizierung gegenüber github.com ist funktional und auch für einfache Zwecke ausreichend, birgt aber einige Nachteile:
+     - Abhängig von einem Drittanbieter
+     - GitHub ist in den USA angesiedelt
+     - Alternative OAuth Provider sind Facebook, Microsoft, Google und Twitter, die alle sie selben Nachteile wie GitHub bieten.
+
+     Für eine zukünftige Iteration wäre eine zentrale Stelle, die die Authentifizierung und Autorisierung nutzt wünschenswert, bzw. selber implementiert.
+
+   - Hinzufügen einer Reportfunktion, die einmal pro Tag/Woche/Monat
+     automatisiert einen Bericht erstellt, in dem festgelegt werden kann, welche Parameter ausgewertet werden sollen.
+     Dieser Report könnte automatisiert über eine verschlüsselte E-Mail an berechtigte Benutzer versendet werden.
+
+   - Aus den selben Einschränkungen, wie in Abschnitt [ref:md_fazit] erklärt, verwendet der Tomcat Server nicht die stärksten, verfügbaren Verschlüsselungsalgorithmen.
+     In einer zukünftigen Version könnten diese nachinstalliert werden, und neu konfiguriert werden.
+
+   - Auch wenn mit der Verwendung von Docker die Grundlage für eine horizontale Skalierung und Replizierkareit geschaffen wurde, sind diese nicht konkret vorhanden.
+     Bei einem Ausfall der Software ist die Überwachung nicht mehr gewährleistet.
+
+   - Es ist möglich bestehende Docker Images anzuzeigen und Container zu starten, stoppen und neu zu starten.
+     Es wäre wünschenswert, wenn es in Zukunft auch möglich wäre, neue Container und Image zu erstellen und im allgemeinen mehr Funktionen der Docker API zu implementieren.
+
+   - Das Dashboard integriert auf einfache Art und Weise den im folgenden Abschnitt vorgestellten ELK Stack, in dem ein Link dazu angegeben ist.
+     Eine engere Integration von ELK wäre wünschenswert. Dazu gehört auch, die Java Log Dateien des Dashboard mittels ELK auszuwerten.

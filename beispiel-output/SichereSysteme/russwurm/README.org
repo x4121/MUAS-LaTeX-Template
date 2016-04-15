@@ -1,0 +1,726 @@
+* Einleitung label:daemon_inst
+  Damit eine zentrale Überwachung(Monitoring) der Systeme in einem Heimnetzwerk realisiert werden kann,
+  muss es eine Komponente geben, die die zu überwachenden Informationen der einzelnen Systeme ermittelt und an das zentrale Überwachungssystem überträgt.
+  Diese Aufgabe wird von einem Dienst übernommen.
+  Dieser Dienst wird auf den einzelnen Systemen installiert und bedarfsabhängig konfiguriert.
+  Zu der bereits formulierten Anwendungsfällen in Abschnitt [[nameref:sec_spec_func]] der Spezifikation, die sich auf die Gesamtanwendung bezogen haben,
+  kommen für den Überwachungsdienst noch folgende funktionale Anforderungen hinzu:
+  #+CAPTION: Funktionale Anforderungen für den Überwachungsdienst
+  #+ATTR_LATEX: :environment tabularx :align l|X :width \linewidth
+  | *Funktionale* |                                                                                                         |
+  | *Anforderung* | *Beschreibung*                                                                                          |
+  |---------------+---------------------------------------------------------------------------------------------------------|
+  | FA01\RowOdd   | Der Dienst kann neue Einträge in Logdateien erkennen.                                                   |
+  | FA02          | Der Dienst kann regelmäßig einen Befehle ausführen und die Standardausgabe ermitteln.                   |
+  | FA03\RowOdd   | Der Benutzer soll die Möglichkeit haben die Überwachung konfigurieren zu können.                        |
+  | FA04          | Der Benutzer kann Einträge, die von der Logdateiüberwachung erkannt werden, filtern.                    |
+  | FA05\RowOdd   | Der Benutzer hat die Möglichkeit für die Logdateiüberwachung verschiedene Kritikalitäten zu definieren. |
+  | FA06          | Der Dienst soll die gesammelten Daten gesichert an das zentrale Überwachungssystem übermitteln.         |
+
+* Architektur
+  Im folgenden wird die Architektur des Überwachungsdienstes beschrieben.
+  Zunächst wird aufgezeigt, welche Aufgaben der Überwachungsdienst in der Gesamtarchitektur übernimmt.
+  Anschließend wird auf den Aufbau des Überwachungsdienstes eingegangen.
+
+** Einordnung in die Gesamtarchitektur
+   Der Überwachungsdienst muss zunächst auf die Systeme installiert werden.
+   Anschließend ist die Überwachung des Systems aktiv.
+   Abbildung [[ref:abb_gesamtArch]] zeigt einen Ausschnitt der Gesamtarchitektur.
+   Der Dienst ist in der Grafik in rot dargestellt und sendet die erhobenen Daten über eine sichere Verbindung (SSL) an das Überwachungssystem (SichHeimMonitor).
+   Die Komponente, die dabei die Daten empfängt und in eine Datenbank ablegt ist blau dargestellt.
+   Das bedeutet das es eine *zentrale Datenhaltung* gibt.
+
+   #+CAPTION: Einordnung in die Gesamtarchitektur label:abb_gesamtArch
+   #+ATTR_LATEX: :placement [H] :width 0.7\textwidth
+   [[./russwurm/monitoringDaemonGesamt.png]]
+
+** Architektur des Überwachungsdienstes
+   Der Überwachungsdienst besteht aus sieben Klassen und zwei Dokumenten.
+   Abbildung [[ref:abb_feinArch_service]] zeigt auf, in welchen Beziehungen die einzelnen Klassen und Dokumente zueinander stehen.
+   Anschließend werden kurz die Aufgaben der einzelnen Klassen und Dokumente erläutert.
+   Die blau Dargestellten Komponenten sind Hilfsklassen und sorgen dafür, dass die Daten, die bei der Überwachung anfallen formatiert und an den zentralen Überwachungsserver gesendet werden.
+   Die grünen Bereiche kümmern sich um die Konfiguration und den Start des Dienstes, während die in rot dargestellten Teile die eigentliche Überwachung steuern.
+   Das Client-Zertifikat, welches vom Dienst verwendet wird, ist hier nicht dargestellt.
+
+   #+CAPTION: Architektur des Überwachungsdienstes label:abb_feinArch_service
+   #+ATTR_LATEX: :placement [H] :width 0.8\textwidth
+   [[./russwurm/feinarchitekturDienst.png]]
+
+   - *server.crt:* In der Datei =server.crt= befindet sich ein Zertifikat mit einem öffentlichen 2048 Bit RSA Schlüssel.
+     Damit wird eine Verschlüsselung über SSL mit dem zentralen Überwachungsserver ermöglicht.
+     Zusätzlich wird ein Client-Zertifikat benötigt.
+     Dieses ist in der Grafik nicht abgebildet.
+
+   - *monitor.conf:* In dieser Datei kann die Konfiguration der Anwendung vorgenommen werden.
+     Es kann eingestellt werden, wie der zentrale Überwachungsserver erreicht werden kann.
+     Außerdem kann bestimmt werden, welche Daten des Systems überwacht werden sollen.
+
+   - *MonitoringDaemon:* Die Klasse =MonitoringDaemon= ist ein Thread und gleichzeitig Haupteinstiegspunkt der Anwendung.
+     Hier wird die Datei =monitor.conf= verwendet, um mehrere Threads der Klasse =MonitoringThreads= zu starten.
+     Das Programm beendet sich erst, wenn ein Interruptsignal an den Prozess gesendet wird.
+
+   - *MonitoringThread:* Der =MonitoringThread= ist eine abstrakte Basisklasse und bietet ihren Unterklassen die Möglichkeit verschiedene Überwachungsaufgaben in einem bestimmten Intervall ausführen zu können.
+     Nach jedem Intervall wird die Methode =doTask()= aufgerufen.
+     Diese Methode erhebt die zu überwachenden Daten und verwendet die Klassen =SSLSender= und =JSONBuilder=, um diese an den zentralen Überwachungsserver zu senden.
+
+   - *MonitoringLogfileThread:* Mit der Klasse
+     \\
+     =MonitoringLogfileThread= können Logdateien überwacht werden.
+
+   - *MonitoringCommandThread:* Mit der Klasse
+     \\
+     =MonitoringCommandThread= kann die Ausgabe bestimmter Befehle überwacht werden.
+     Das Kommando =df -h | sed '1d' | awk {'print $1, $5'}= könnte zum Beispiel verwendet werden, um den freien Speicherplatz eines Systems zu ermitteln.
+
+   - *SSLSender:* Die Klasse =SSLSender= übernimmt die Aufgabe die Daten zu kodieren und über SSL an den zentralen Monitoringserver zu übermitteln.
+
+   - *JSONBuilder:* Mit der Hilfsklasse =JSONBuilder= werden die erhobenen Daten in einen JSON-String konvertiert.
+
+** Architektur des Überwachungsservers
+   Die von dem Dienst erhobenen Daten werden an einen Überwachungsserver gesendet.
+   Der Server überprüft die Daten und speichert diese in einer Datenbank ab.
+   In Abbildung [[ref:abb_arch_ueberwach]] wird die Architektur des Überwachungsservers dargestellt.
+
+   #+CAPTION: Architektur des Überwachungsservers label:abb_arch_ueberwach
+   #+ATTR_LATEX: :placement [H] :width 0.7\textwidth
+   [[./russwurm/feinarchitekturServer.png]]
+
+   - *StartMonitoringServer:* Die Klasse =StartMonitoringServer= startet den Thread =MonitoringDaemonServer=.
+
+   - *MonitoringDaemonServer:* Diese Klasse öffnet einen SSLServerSocket und startet für jede eingehende Verbindung einen Thread des Typs =MonitoringDaemonClientHandler=.
+     Außerdem wird mit der Verfügbarkeitsüberwachung, durch starten mehrerer Threads der Klasse =AvailabilityThread=, begonnen.
+
+   - *MonitoringDaemonClientHandler:* Die Aufgabe dieser Klasse ist das Empfangen der eingehenden Überwachungsdaten.
+     Darüberhinaus überprüft diese Klasse die Daten und schreibt diese in eine Datenbank.
+     Dabei werden die Klassen =MonitoringMessageJSONParser= und =MonitoringMessage2RedisWriter= verwendet.
+     Es wird überprüft, ob der Client noch aktiv ist.
+     Dadurch kann festgestellt werden, ob die Überwachung noch aktiv ist.
+
+   - *AvailabilityThread:* Diese Klasse verwendet das Kommandozeilenprogramm =ping=, um in regelmäßigen Abständen, die Verfügbarkeit der Systeme zu überprüfen.
+
+   - *MonitoringMessageJSONParser:* Diese Hilfsklasse gibt Felder eines JSON-Strings zurück.
+
+   - *MonitoringMessage2RedisWriter:* Diese Hilfsklasse nimmt eine Verbindung zu einer Redis Datenbank auf und schreibt eintreffenden Daten in die Datenbank.
+
+* Implementierung
+  In diesem Abschnitt wird auf die Implementierung des Überwachungsdienstes eingegangen.
+  Der Dienst wurde in der Programmiersprache Python realisiert.
+  Der Überwachungsserver ist in Java programmiert.
+  Zunächst wird der allgemeine Programmablauf des Diestes beschrieben.
+  Anschließend wird der Aufbau der Konfigurationsdatei dargelegt.
+
+  1. Der Dienst sammelt die zu überwachenden Daten.
+  2. Der Dienst sendet Daten an den zentralen Überwachungsserver.
+  3. Der zentrale Überwachungsserver legt die empfangenen Daten in Redis ab.
+  4. Das Dashboard entnimmt aktuelle Überwachungsdaten aus Redis.
+
+** Allgemeiner Programmablauf des Dienstes
+   Der Dienst muss beim hochfahren des Systems gestartet werden.
+   Die Möglichkeiten dies zu realisieren wird in Kapitel nameref:sec_inst_konf beschrieben.
+   Anschließend verwendet er die in der Konfigurationsdatei =monitor.conf= angegebene IP-Adresse und den Port um eine Verbindung mit dem zentralen Überwachungsservers aufzubauen.
+   Nach einem erfolgreichen Verbindungsaufbau, wird für jede weitere syntaktisch korrekte Konfigurationszeile der Konfigurationsdatei ein Thread gestartet.
+   Die Threads beginnen daraufhin mit der Überwachung des Systems.
+   Wenn das System heruntergefahren wird und somit ein Interruptsignal an den Dienst gesendet wird, beendet der Dienst alle gestarteten Threads und endet anschließend selbst.
+   In Abbildung [[ref:abb_daemonAblauf]] wird der Programmablauf anhand eines Ablaufdiagramms dargestellt.
+   
+   #+CAPTION: Daemon Ablaufdiagramm label:abb_daemonAblauf
+   #+ATTR_LATEX: :placement [H] :width 0.8\textwidth
+   [[./russwurm/daemonAblauf.png]]
+
+** Aufbau der Konfigurationsdatei
+   Der Dienst verwendet eine Konfigurationsdatei mit dem Namen\\ =monitor.conf=.
+   Durch Einführung einer Konfigurationsdatei hat der Anwender die Möglichkeit, zu bestimmen welche Daten des Systems von dem Dienst überwacht werden sollen.
+   Das hat den Vorteil, dass der Dienst für verschiedene Systeme individuell konfiguriert werden kann.
+   Im folgenden wird der syntaktische Aufbau der Konfigurationsdatei erläutert.
+   \\
+   \\
+   In der Konfigurationsdatei werden Leerzeilen und Zeilen die mit einem Doppelkreuz(#) beginnen ignoriert.
+   Somit besteht die Möglichkeit mit dem Doppelkreuz die Datei mit Zeilenkommentaren zu versehen.
+   In der Datei müssen die Schlüsselwörter "`IP"' und "`Port"' spezifiziert werden.
+   Diese Angaben werden benötigt, damit der Dienst eine Verbindung zum zentralen Überwachungsserver aufnehmen kann.
+   Durch folgende Syntax in der Datei können die Schlüsselwörter einem Wert zugeordnet werden:
+   \\
+   *IP:* {IP-Nummer des Überwachungsservers}
+   \\
+   *Port:* {Port-Nummer des Überwachungsservers}
+   \\
+   \\
+   Die anderen Konfigurationszeilen, die nicht leer sind und nicht mit dem Doppelkreuz oder einem Schlüsselwort beginnen, werden zur Steuerung der Systemüberwachung herangezogen.
+   Diese Zeilen müssen eine der beiden Syntaxen entsprechen, die in der folgenden Tabelle angegeben sind:
+
+   #+CAPTION: Mögliche der Konfigurationszeilen
+   #+ATTR_LATEX: :environment tabularx :align l|X :width \linewidth
+   |                   | *Syntax*                                                                      |
+   |-------------------+-------------------------------------------------------------------------------|
+   | *Logdatei*\RowOdd | =c#command#topic#intervall_in_ms#\ [criticality#regex_for_logfile(optional)]= |
+   | *Kommando*        | =l#logfile_path#topic#intervall_in_ms=                                        |
+
+   Zur Konfiguration einer Logdateiüberwachung wird die Syntax, die in der ersten Spalte angegeben ist benötigt.
+   Wenn die Ausgabe eines Befehls überwacht werden soll, muss die Konfiguration mit der Syntax der zweiten Spalte vorgenommen werden.
+   Beide Konfigurationszeilen verwenden als Trennzeichen zwischen ihren Werten ein Doppelkreuz und müssen mindestens vier Werte enthalten.
+   Im folgenden werden die einzelnen Felder und die dazugehörigen Werte eingeführt:
+   \\
+   \\
+   Pflichtfelder: Diese Felder müssen sowohl bei Logdateien als auch bei Kommandos angegeben werden.
+   - *Feld 1:* Dieses Feld darf nur die Werte =c= oder =l= annehmen.
+     Wenn der Wert =c= angegeben wird, wird dem Dienst bekannt gemacht, dass nun eine Konfigurationszeile für ein Kommando folgt.
+     Durch Angabe des Werts =l= geht der Dienst davon aus, dass eine Konfigurationszeile für eine Logdatei folgt.
+   - *Feld 2:* In diesem Feld wird eine Zeichenkette erwartet.
+     Abhängig vom ersten Feld wird die Zeichenkette entweder als Kommando oder als Dateipfad interpretiert.
+     Bei Angabe dieses Feldes sollte vorher überprüft werden, ob der Betriebssystembenutzer, der den Dienst startet, die erforderlichen Rechte besitzt,
+     um auf die angegebene Logdatei zugreifen bzw. den angegebenen Befehl ausführen zu können.
+   - *Feld 3:* Mit diesem Feld kann bestimmt werden, wie die erhobenen Daten auf dem Dashboard dargestellt werden.
+     Darüberhinaus kann dieses Feld verwendet werden, um die erhobenen Daten mehrerer Konfigurationszeilen zu gruppieren.
+     Es wird erwartet, dass der Inhalt dieses Feldes mit einem vordefinierten Präfixe beginnt.
+     Konfigurationzeilen, die in diesem Feld die gleiche Zeichenkette verwenden, werden auf dem zentralen Überwachungssystem im selben Kontext gebündelt dargestellt.
+     Im folgenden wird aufgezeigt, wie die einzelnen Präfixe vom zentralen Überwachungssystem interpretiert werden.
+
+     - *ram:* Mit diesem Präfix wird dem zentralen Überwachungssytem mitgeteilt, dass die folgenden Daten als Liniendiagramm dargestellt werden sollen.
+       Damit das zentrale Überwachungssystem die Daten richtig interpretieren kann, müssen diese als zwei Zahlen mit Leerzeichen getrennt übermittelt werden.
+       Die erste Zahl soll dabei den gesamten verfügbaren RAM angeben und die zweite Zahl soll den momentan verwendeten RAM angeben.
+     - *cpu:* Die Daten mit diesem Präfix werden ebenfalls als Liniendiagramm angezeigt.
+       Die Auslastung einer CPU wird in einer Zeile angeben.
+       Wenn es mehrere CPUs gibt oder die Auslastung mehrerer Kerne angezeigt werden soll, müssen zusätzliche Zeilen hinzugefügt werden.
+       Eine Zeile muss zwei Werte enthalten.
+       Der erste Wert ist eine beliebige Zeichenkette, die beschreibt, für welchen CPU bzw. Kern die Auslastung übermittelt wird.
+       Der zweite Wert ist eine Zahl, die die Auslastung der CPU bzw. des Kerns in Prozent angibt.
+     - *hdd:* Daten, die mit diesem Präfix markiert sind, werden als Tortendiagramm im zentralen Überwachungssytem angezeigt.
+       Die Daten müssen zwei Zahlen enthalten.
+       Die erste Zahl gibt den gesamten Speicherplatz des Systems an, während die zweite Zahl den verwendet Speicherplatz angibt.
+     - *command:* Diese Daten werden vom zentralen Überwachungssytem als Text angezeigt.
+       Und können beliebigen Inhalt haben.
+     - *logfile:* Diese Daten werden je nach Kritikalität vom zentralen Überwachungssytem als Text in verschiedenen Farben angezeigt.
+       Der Inhalt dieser Daten ist beliebig.
+
+   - *Feld 4:* In diesem Feld muss eine Zahl eingegeben werden.
+     Diese Zahl legt ein Zeitintervall in Millisekunden fest, in dem der Dienst die zu überwachenden Daten erhebt.
+     Bei einer Logdateiüberwachung bedeutet das, dass die Logdatei von der zuletzt eingelesenen Zeile anfängt, die Datei zu scannen.
+     Bei der Überwachung von der Ausgabe eines Kommandos wird nach Ablauf des Zeitintervalls das Kommando ausgeführt.
+   \\
+   \\
+   Optionale Felder: Diese beide optionalen Felder können nur für eine Logdateiüberwachung angegeben werden.
+   - *Feld 5:* Diese optionale Angabe legt eine Kritikalität für die Überwachung eine Logdatei fest.
+     Es gibt die folgenden drei verschiedene Stufen, die hier angegeben werden können:
+
+     - *INFO:* Die erhobenen Daten werden an das zentrale Überwachungssystem gesendet und angezeigt.
+     - *WARNING:* Wenn Meldungen für diese Kritikalität an den zentralen Überwachungssystem eingeht, werden diese in einem anderen Bereich dargestellt.
+     - *CRITICAL:* Alle kritische Daten, die auf den zentralen Überwachungssystem eintreffen werden auch in einem anderen Bereich dargestellt.
+       Der Benutzer sieht durch eine markierte Ausgabe auf dem Dashboard sofort, wenn kritische Meldungen eintreffen.
+
+   - *Feld 6:* Dieses optionale Feld erwartet einen regulären Außdruck.
+     Der reguläre Außdruck muss die Syntax aufweißen, die von dem Python Modul =re= akzeptiert wird.
+     Die Syntax solcher regulärer Außdrücke kann in der Python-Dokumentation\footnotemark nachgeschlagen werden.
+     Der Dienst ignoriert alle Zeilen der Logdatei, die nicht dem angegebenen Muster entsprechen.
+
+#+LaTeX: \footnotetext{\url{https://docs.python.org/2/library/re.html}}
+
+** Logdateiüberwachung
+   In Logdateien protokollieren Prozesse, welche Aktionen vorgenommen werden oder welche Fehler bei der Programmausführung auftreten.
+   In der Regel ist es nicht möglich vorherzusagen, wann ein Prozess einen Eintrag in eine Logdatei schreibt.
+   Es gibt somit keine effiziente Möglichkeit eine Logdateiüberwachung durchzuführen.
+   \\
+   \\
+   Der Dienst lößt dieses Problem dadurch, dass es in regelmäßigen Abstand die Logdatei auf Änderungen überprüft.
+   Die Verfolgung dieses Lösungswegs führt jedoch dazu, dass der Dienst protokolieren muss, welche Zeile als letztes gelesen wurde.
+   Der Ablauf der Logdateiüberwachung lässt sich in drei Schritten zusammenfassen.
+   Der erste Schritt ist das initale Einlesen der Logdatei.
+   Der zweite Schritt ist das überprüfen der Logdatei.
+   Der dritte Schritt ist das Lesen und  ggf. Filtern der neuen Zeilen.
+   Bei jedem weiteren Programmdurchlauf wird nur noch Schritt zwei und drei durchgeführt.
+   Im folgenden werden die drei Schritte genauer erläutert
+
+   - *Schritt 1: Initiales Einlesen*\\
+     Wenn ein Thread der Klasse =MonitoringLogfileThread= gestartet wird, wird die zu überwachende Logdatei eingelesen.
+     Der Thread merkt sich die zuletzt gelesene Zeilennummer und die Dateigröße.
+     Dies ist notwendig, damit bereits gelesene Zeilen der Logdatei nach einem Neustart des Dienstes nicht erneut erfasst werden.
+     Nachfolgender Code zeigt die Implementierung des initalen Einlesens der Logdatei:
+   #+CAPTION: Initiales ermitteln der Zeilennummern
+   #+BEGIN_src python
+self.size = os.stat(file_path).st_size
+
+with open(self.file_path) as f:
+     self.last_position = sum(1 for line in f)
+   #+END_src
+
+   - *Schritt 2 Logdatei überprüfen*\\
+     In den meisten Linux-Betriebssystemen wird das Werkzeug =logrotate= eingesetzt.
+     Dieses Hilfsprogramm sorgt dafür, dass eine Logdatei nicht beliebig groß wird.
+     Logdateien werden in einem bestimmen Intervall und ab einer bestimmten Dateigröße umbenannt und komprimiert.
+     Für den Überwachungsdienst bedeutet das, dass eine Überprüfung stattfinden muss, ob das Programm =logrotate= ausgeführt wurde.
+     Je nachdem, wie =logrotate= konfiguriert ist, kann es vorkommen, dass die Logdatei nicht mehr existiert oder deutlich weniger Zeilen enthält.
+     Wenn die Logdatei nicht existiert, muss gewartet werden, bis der Prozess der die Protokollierung dort vornimmt, die Datei wieder erstellt.
+     Falls die Datei existiert und eine kleinere Dateigröße hat als beim letzten Durchlauf, wird die vermerkte Zeilennummer wieder auf Null zurückgesetzt.
+     Das Zurücksetzen der Zeilennummer ist wichtig, damit der Dienst die Überwachung wieder an der richtigen Position aufnehmen kann.
+     Die folgende Funktion übernimmt die Überprüfung der Logdatei:
+     #+CAPTION: Funktion zur Überprüfung von Logrotate
+     #+BEGIN_src python
+def checkLogRotate(self):
+    if os.path.isfile(self.file_path):
+        currentSize = os.stat(self.file_path).st_size
+        if currentSize < self.size:
+            self.last_position = 0
+        self.size = currentSize
+        return True
+    else:
+        return False
+   #+END_SRC
+
+   - *Schritt 3 Logdatei lesen und filtern*\\
+     In diesem Schritt wird die Logdatei ab der letzten Position gelesen.
+     Falls ein regulärer Ausdruck definiert wurde, werden die gelesenen Zeilen auf Übereinstimmung geprüft.
+     Alle Zeilen, die nicht dem regulären Ausdruck entsprechen, werden von dem Dienst ignoriert.
+     Wenn es neue Zeilen gibt, die von dem Dienst gefunden wurden, werden diese zusammen mit weiteren Informationen in ein JSON-Objekt transformiert und an das zentrale Überwachungssystem gesendet.
+
+** Überwachung von Systemparametern
+   Die Logdateiüberwachung ist geeignet, um die Funktionalität von Prozessen oder den Zugriff auf bestimmte Ressourcen zu überwachen.
+   Die Logdateiüberwachung eignet sich jedoch nicht, um Systemparameter wie z.B. die CPU-Auslastung zu überwachen.
+   Um solche Systemparameter zu überwachen wird eine andere Lösung benötigt.
+   Der Dienst kann diese Aufgabe realisieren, indem er die Standardausgabe von ausgeführten Befehlen überwacht.
+   \\
+   \\
+   Der Thread der Klasse =MonitoringCommandThread= führt in dem vom Benutzer angegebenen Intervall einen Befehl aus und sendet die Standardausgabe an das zentrale Überwachungssystem.
+   Wenn der Befehl eine fehlerhafte Syntax aufweist oder einen Rückgabewert ungleich 0 bei der Ausführung zurückgibt, beendet sich die Überwachung mit einer Fehlermeldung.
+   \\
+   \\
+   Für die Überwachung des freien Arbeitsspeichers eines Systems wäre zum Beispiel die Konfigurationszeile =c#free | sed '1d' | sed '2d' | awk '{print $2, $3}'#RAM#5000= geeignet.
+   Der Befehl free gibt Informationen zum Arbeitsspeicher eines Systems zurück.
+   Durch Filterung der Ausgabe und Spezifikation des Schlüsselworts =RAM= wird auf dem Dashboard ein Liniendiagramm angzeigt, das den Verlauf des Arbeitsspeichers des Systems zeigt.
+
+** Verfügbarkeitsüberwachung
+   Zusätzlich zu den in Abschnitt [[ref:daemon_inst]] angegebenen Anforderungen wurde ein Verfügbarkeitsüberwachung realisiert. Der Überwachungsserver überprüft und verwaltet zwei verschiedene von Überwachungsdaten.
+   Das erste gibt die Verfügbarkeit eines Hosts und das zweite gibt die Verfügbarkeit der Überwachung an. Die Verfügbarkeitsüberwachung eines Hosts wird mit dem Kommandozeilenprogramm =ping= realisiert.
+   Um zu überprüfen, ob die Überwachung eines Hosts aktiv ist, wird die Aktivität des verbundene Sockets getestet. Dies wurde realisiert, indem ein Timeout gesetzt wurde.
+   Nach Ablauf des Timeouts wird überprüft, ob der Socket noch aktiv ist. Falls der Socket noch aktiv ist, wird der Timeout erhöht. Falls der Socket inaktiv ist, bedeutet das, dass keine Überwachung mehr aktiv ist.
+   Ein festes Timeout kann nicht verwendet werden, da das Überwachungsintervall frei konfiguriert werden kann. Es ist lediglich denkbar, dass ein maximales Timeout spezifiziert werden kann.
+   In dieser Implementierung ist kein maximales Timeout vorgegeben, da dieses erst in einer realen Testumgebung abgeschätzt werden kann.
+
+** Nachrichtenformat des Dienstes
+   Der Dienst verpackt die Informationen in eine Zeichenkette im JSON-Format.
+   Das dabei entstehende JSON-Objekt hat eine Ebene auf der sich alle Felder befinden.
+   Der JSON-String kann folgende Felder enthalten:
+   - *Host:* Hostname des Systems
+   - *Time:* Timestamp in Sekunden von NTP(Network Time Protocol)-Servern aus Deutschland (de.pool.ntp.org)
+   - *Topic:* Eines vom Anwender konfiguriertes Signalwort zur Gruppierung und Steuerung der Ausgabe auf dem Dashboard.
+   - *Criticality:* Kritikalität der gefundenen Zeilen der Logdatei
+   - *Logfile_Name:* Pfad der Logdatei die überwacht wird.
+   - *Command:* Befehl der Ausgeführt wurde.
+   - *Result:* Ergebnis der Logdateiüberwachung oder eines Befehls.
+   \\
+   \\
+   Wenn die Nachricht von einer Logdateiüberwachung stammt, tauchen die Felder =Criticality= und =Logfile_Name= auf.
+   Das Feld =Command= fehlt.
+   Wenn die Nachricht von der Überwachung einer Befehlsausgabe stammt, existiert das Feld =Command=.
+   Die Felder =Criticality= und =Logfile_Name= existieren nicht.
+
+** Implementierung der Überwachungsservers
+   Der Überwachungsserver ist von dem Dashboard unabhängig.
+   Die einzige Aufgabe des Überwachungsservers ist es, die Überwachungsdaten zu empfangen und in die Redis Datenbank abzuspeichern.
+   Das Dashboard entnimmt daraufhin Daten aus Redis und zeigt diese über die Webanwendung an.
+   Die einzige Abhängigkeit die dabei entsteht, ist die Steuerung der Ausgabe auf dem Dashboard durch Schlüsselwörter.
+   Die Abbildung [[ref:abb_server2Dash]] zeigt die Beziehung zwischen dem Dashboard und dem Überwachungsserver auf.
+   Der Überwachungsserver füllt Redis zum Beispiel mit dem Befehl =ZADD= mit Daten.
+   Das Dashboard entnimmt mit dem Befehl =ZRANGE= die erforderlichen Daten für die Webanwendung.
+
+   #+CAPTION: Datenfluss der Überwachungsservers label:abb_server2Dash
+   #+ATTR_LATEX: :placement [H] :width 0.7\textwidth
+   [[./russwurm/Server2Dashboard.png]]
+
+* Sicherheit
+  In diesem Abschnitt werden die von dem Dienst umgesetzten Sicherheitsmaßnahmen genauer erleutert.
+  Folgende Sicherheitsmaßnahmen, die bei der Sicherheitsbedarfsanalyse zusammengetragen wurden, wirken auf Anforderungen des Überwachungsdienstes:
+#+CAPTION: Sicherheitsmaßnahmen die den Überwachungsdienst betreffen
+  #+ATTR_LATEX: :environment tabularx :align l|lX :width \linewidth
+  | *Maßnahme* | *Beschreibung*                      | *Wirkt auf Anforderung* |
+  |------------+-------------------------------------+-------------------------|
+  | /          | <                                   | <                       |
+  | M01\RowOdd | Der Datenverkehr wird verschlüsselt | FA06                    |
+  | M03        | Der Datenverkehr wird signiert      | FA06                    |
+  \\
+  Der Dienst sendet systeminterne Daten über das Netzwerk.
+  Diese Daten enthalten in der Regel vertrauliche Informationen über das System.
+  Aus diesem Grund müssen diese Daten bei der Übertragung von dem System zum zentralen Überwachungsserver geschützt werden.
+  \\
+  \\
+  Die Lösung für dieses Problem ist die verschlüsselte Übertragung der Daten.
+  Der Dienst setzt das hybride Verschlüsselungsprotokoll SSL ein, um die vertraulichen Daten an den zentralen Überwachungsserver zu senden.
+  Durch Verwendung einer SSL-Verschlüsselung wird die Vertraulichkeit und Integrität der Daten hergestellt.
+  Im folgenden wird die Erzeugung eines SSL-Zertifikats mit OpenSSL und die Konfiguration des SSL-Servers genauer erleutert.
+
+** Erstellung eines SSL-Zertifikats
+   Bei der Erstellung der SSL-Zertifikate wurden die Richtlinien im OWASP Guide\footnotemark verwendet.
+   Demnach werden private Schlüssel mit 2048 Bit Länge verwendet.
+   Dieser Schlüssel wird vor unauthorisierten Zugriff geschützt.
+   Das Zertifikat wird nur von einem Server verwendet und hat einen qualifizierten Namen.
+   Ein Domainname ist für das Zertifikat nicht notwendig.
+   Die anderen Regeln werden nicht betrachtet, da sich diese auf Webanwendungen beziehen.
+   Es wurde ein Server-Zertifikat und ein Client-Zertifikat erstellt.
+   Das Client-Zertifikat wird von allen Clients zur Authentifizierung verwendet.
+   Im folgenden wird das Vorgehen beschrieben, um das Server-Zertifikat zu erstellen.
+   #+LaTeX: \footnotetext{\url{https://www.owasp.org/index.php/Transport_Layer_Protection_Cheat_Sheet#Server_Certificate}}
+
+   1. Zunächst wird mit dem Befehl =genrsa= ein privater RSA Schlüssel erzeugt.
+      Die Option =-des3= sorgt dafür, dass der erzeugte Schlüssel mit dem synchronen Verschlüsselungsverfahren Triple-DES(Data Encryption Standard) im CBC(Cipher Block Chaining Mode) Modus verschlüsselt wird.
+      Die Zahl 2048 legt die Anzahl der Bits fest, aus die sich der private Schlüssel zusammensetzt.
+      #+BEGIN_SRC sh
+openssl genrsa -des3 -out server.orig.key 2048
+      #+END_src
+   2. Dieser Befehl wandelt den Schlüssel in das PEM(Privacy Enhanced Mail) Format um.
+      #+BEGIN_SRC sh
+openssl rsa -in server.orig.key -out server.key
+      #+END_src
+   3. Als nächstes wird mit dem Befehl 'req' aus dem Schlüssel eine CSR(Certificate Singning Request) erzeugt.
+      Bei der Ausführung wird der Benutzer aufgeforderd Angaben zu dem Zertifikat einzugeben.
+      Die Zertifikatsregistrierungsanforderung könnte einer Zertifizierungsstelle zur digitalen Unterschrift vorgelegt werden.
+      #+BEGIN_SRC sh
+openssl req -new -key server.key -out server.csr
+      #+END_src
+   4. Da dieses Zertifikat nur zur Kommunikation zwischen Systemen verwendet wird, ist eine digitale Unterschrift von einer Zertifizierungsstelle nicht erforderlich.
+      Deswegen wird das Zertifikat mit dem Befehl =x509= selbst Unterschrieben.
+      Die Option =-days= legt fest, wieviele Tage das Zertifikat gültig ist.
+      Das Zertifikat server.crt wird von dem Dienst für die Verschlüsselung des Datenverkehrs verwendet.
+      #+BEGIN_SRC sh
+openssl x509 -req -days 365 -in server.csr
+   -signkey server.key -out server.crt
+      #+END_src
+   5. Das zentrale Überwachungssystem ist in Java implementiert.
+      Java verwendet das =keytool=, um mit Zertifikaten zu arbeiten.
+      Zertifikate müssen mit dem "`keytool"' in einen "`keystore"' importiert werden, bevor man diese im Programm verwenden kann.
+      Das Client-Zertifikat kann ohne Umwege direkt importiert werden.
+      Damit der "`keystore"' das mit OpenSSL erzeugte Server-Zertifikat und den privaten Schlüssel importieren kann, muss dieses zuerst in das PKCS#12-format umgewandelt werden.
+      Der Befehl =pkcs12= erzeugt aus dem X.509 Zertifikat und dem privaten Schlüssel die erforderliche Datei im PKCS#12-format.
+      #+BEGIN_SRC sh
+openssl pkcs12 -export -in server.crt
+   -inkey server.key -chain -CAfile server.crt
+   -name "monitoringDaemon" -out server.p12
+      #+END_src
+
+** Konfiguration des SSL-Servers
+   Bevor der Überwachungsserver SSL-Verbindungen entgegennimmt, wird diese Konfiguriert.
+   Bei der Konfiguration der SSL-Verbindung wurde der OWASP Guide\footnotemark verwendet.
+   #+LaTeX: \footnotetext{\url{https://www.owasp.org/index.php/Transport_Layer_Protection_Cheat_Sheet#Server_Protocol_and_Cipher_Configuration}}
+   \\
+   \\
+   Die Methode =configureSSL()= der Klasse =MonitoringDaemonServer= nimmt ein Objekt des Typs =ServerSocket= entgegen und gibt ein konfiguriertes Objekt des Typs =SSLServerSocket= zurück.
+   Der nachfolgende Code zeigt einen Ausschnitt dieser Methode.
+   #+CAPTION: Konfiguration des SSL-Servers
+   #+BEGIN_src java
+private SSLServerSocket configureSSL(ServerSocket socket) {
+  SSLServerSocket configuredSocket = (SSLServerSocket)socket;
+  SSLParameters sslParameters = configuredSocket.getSSLParameters();
+  // only support TLSv.1.1 and TLSv1.2
+  ArrayList<String> protocolsToSet = new ArrayList<>();
+  for(String protocol: configuredSocket.getSupportedProtocols())
+  {
+    if(supportedProtocols.contains(protocol))
+    {
+      protocolsToSet.add(protocol);
+    }
+  }
+...
+  // only support special set of secure ciphers
+  ArrayList<String> ciphersToSet = new ArrayList<>();
+  for(String cipher: configuredSocket.getSupportedCipherSuites())
+  {
+    if(supportedCiphers.contains(cipher))
+    {
+      ciphersToSet.add(cipher);
+    }
+  }
+...
+  sslParameters.setUseCipherSuitesOrder(true);
+  sslParameters.setNeedClientAuth(true);
+  configuredSocket.setSSLParameters(sslParameters);
+  return configuredSocket;
+}
+   #+END_src
+   \\
+   Es werden nur die Protokolle "`TLSv.1.1"' und "`TLSv1.2"' verwendet.
+   Die SSL-Versionen 1, 2 und 3 gelten nach OWASP als unsicher und sollten nicht mehr verwendet werden.
+   Um die unterstützten Cipher Suites zu bestimmen, wurde die Liste der von Java unterstützten Cipher Suites\footnotemark untersucht.
+#+LaTeX: \footnotetext{\url{http://docs.oracle.com/javase/8/docs/technotes/guides/security/SunProviders.html}}
+   Aufgrund von Importregulierungen\footnotemark enthält diese Liste nur bestimmte Cipher Suites.
+   Anschließend wurde diese Liste gefiltert und sortiert, sodass alle Regeln von OWASP eingehalten werden.
+   Daher können nur die Cipher Suites von dem Server verwendet werden, die in nachfolgender List aufgeführt sind.
+   Die Reihenfolge der Cipher Suites ist die Reihenfolge, in der diese von oben nach unten aufgeführt sind.
+#+LaTeX: \footnotetext{\url{https://docs.oracle.com/javase/8/docs/technotes/guides/security/SunProviders.html#importlimits}}
+
+   #+CAPTION: Sichere SSL-Cipher Suites
+   #+BEGIN_src sh
+TLS_ECDHE_RSA_WITH_AES_128_GCM_SHA256
+TLS_RSA_WITH_AES_128_GCM_SHA256
+TLS_ECDH_RSA_WITH_AES_128_GCM_SHA256
+TLS_DHE_RSA_WITH_AES_128_GCM_SHA256
+TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA256
+TLS_RSA_WITH_AES_128_CBC_SHA256
+TLS_ECDH_RSA_WITH_AES_128_CBC_SHA256
+TLS_DHE_RSA_WITH_AES_128_CBC_SHA256
+TLS_ECDHE_RSA_WITH_AES_128_CBC_SHA
+TLS_RSA_WITH_AES_128_CBC_SHA
+TLS_ECDH_RSA_WITH_AES_128_CBC_SHA
+TLS_DHE_RSA_WITH_AES_128_CBC_SHA
+TLS_ECDHE_RSA_WITH_3DES_EDE_CBC_SHA
+TLS_ECDH_RSA_WITH_3DES_EDE_CBC_SHA
+TLS_EMPTY_RENEGOTIATION_INFO_SCSV
+   #+END_src
+
+* Installation und Konfiguration des Dienstes label:sec_inst_konf
+  Der Überwachungsdienst muss auf den zu überwachenden Systemen installiert und konfiguriert werden.
+  In diesem Abschnitt wird erklärt wie dabei vorgegangen werden muss.
+  Es wird an einem Beispielsystem gezeigt, wie eine Konfiguration des Dienstes erfolgen könnte.
+
+** Installation als Linux-Dienst
+   1. *Systemvorraussetzungen überprüfen:* Als erstes sollte sichergestellt werden, dass Python in der Version 2.x oder 3.x auf dem System installiert ist.
+      Bei den meisten Linux-Betriebssystemen ist Python bereits vorinstalliert.
+      Um zu überprüfen, ob Python bereits installiert ist, kann folgender Befehl verwendet werden:
+      #+BEGIN_SRC sh
+which python && which python3
+      #+END_src
+      Die Version von Python kann entweder mit dem Befehl\\ ~python --version~ oder
+      ~python3 --version~ überprüft werden.
+      Wenn Python noch nicht installiert ist, kann dies über das Packetverwaltungsprogramm APT
+      mit den Befehl\\ ~sudo apt-get install python~ oder\\ ~sudo apt-get install python3~ erledigt werden.
+      Wenn kein Packetverwaltungsprogramm existiert, kann die Installation von Python auch manuell erfolgen.
+      Dafür müssen die Quelldateien[fn:: https://www.python.org/downloads/source/] heruntergeladen werden und anschließend kompiliert werden.
+
+   2. *Dienst ausführen und konfigurieren:*
+      Um den Dienst zu starten, muss je nachdem welche Python Version installiert ist,
+      der Befehl ~python MonitoringDaemon.py~ oder\\ ~python3 MonitoringDaemon.py~ ausgeführt werden.
+      Zuvor muss der Dienst über die Datei =monitor.conf= konfiguriert werden.
+      Der Dienst sollte nicht mit Root-rechten gestartet werden.
+      Es muss vorher bestimmt werden, welche Rechte der Dienst benötigt um seine Überwachungsaufgaben durchzuführen.
+      Ziel sollte hier sein dem Dienst so wenig Berechtigungen zu geben, um gerade noch seine Aufgabe erfüllen zu können(least privilege principle).
+      Dies kann zum Beispiel über eine ACL(Access Control List), die einem bestimmten Benutzer zugeordnet ist, realisiert werden.
+
+   4. *Dienst über Init-Prozess starten und stoppen:*
+      Da das System in der Regel immer im angeschalteten Zustand überwacht werden soll, ist es zu empfehlen den Dienst in den Init-Prozess einzubinden.
+      Dadurch wird der Dienst bereits beim Systemstart ausgeführt.
+      Es gibt mehrere Implementierungen von Init-Systemen(z.B. System V-Init, Upstart oder Systemd).
+      Im folgenden wird für das "`System V-Init"' System ein Beispielskript angegeben.
+      * *System V-Init:*
+        Das System V-Init ist ein init-System.
+        Der erste Prozess der von dem Kernel gestartet wird ist der Init-Prozess mit der Prozess-ID 1.
+        Dieser Prozess startet daraufhin die einzelnen Dienste.
+        Wie die einzelnen Dienste gestartet werden sollen, wird in sogenannten Init-Skripte festgelegt.
+        Diese Skripte befinden sich alle unter "`/etc/init.d/"'.
+        Das folgende Listing zeigt ein Beispiel, wie das Init-Skript für den Überwachungsdienst auszusehen hat.
+
+   #+CAPTION: SysVinit-Skript zum starten und stoppen des Überwachungsdienstes
+   #+BEGIN_SRC js
+#! /bin/sh
+### BEGIN INIT INFO
+# Provides:          MonitoringDaemon
+# Required-Start:    $remote_fs $syslog
+# Required-Stop:     $remote_fs $syslog
+# Default-Start:     2 3 4 5
+# Default-Stop:      0 1 6
+# Short-Description: starts and stops the MonitoringDaemon
+# Description:       starts and stops the MonitoringDaemon
+### END INIT INFO
+
+SCRIPTPATH=/pathToTheScript
+SCRIPTNAME=MonitoringDaemon.py
+PIDFILE="/tmp/monitoringDaemon.pid"
+SCRIPTPARGUMENTS=""
+
+case "$1" in
+  start)
+    echo "Starting MonitoringDaemon"
+    # Start the service
+    echo $SCRIPTPATH/$SCRIPTNAME $SCRIPTARGUMENTS
+    python $SCRIPTPATH/$SCRIPTNAME $SCRIPTARGUMENTS > \
+      /dev/null 2> /dev/null &
+    ;;
+  stop)
+    echo "Stopping MonitoringDaemon"
+    # Stop the service using the pid-file written during __init__
+    kill -2 `cat $PIDFILE`
+    ;;
+  restart)
+    echo "Restarting MonitoringDaemon"
+    kill -2 `cat $PIDFILE`
+    sleep 5
+    python $SCRIPTPATH/$SCRIPTNAME $SCRIPTARGUMENTS > \
+      /dev/null 2> /dev/null &
+    ;;
+  *)
+    echo "Usage: /etc/init.d/MonitoringDaemon {start|stop|restart}"
+    exit 1
+    ;;
+esac
+
+exit 0
+   #+END_src
+
+** Installation als Docker-Container
+   1. *Systemvorraussetzungen überprüfen:*
+      Es gibt nur eine einzige Vorrausetzung die das System erfüllen muss, um den Dienst als Docker-Container zu starten.
+      Auf dem System muss die Docker-Engine installiert sein.
+      Wie Docker auf dem System installiert werden muss kann der Dokumentation\footnotemark entnommen werden.
+      #+LaTeX: \footnotetext{\url{https://docs.docker.com/engine/installation/}}
+
+   2. *Dienst konfigurieren:*
+      Der Dienst muss vor der Erstellung des Docker-Images aus dem Dockerfile konfiguriert werden.
+      In dem Verzeichnis, in dem sich das Dockerfile befindet, gibt es ein weiteres Unterverzeichnis mit dem Namen =appFiles=.
+      Dort befindet sich die Datei =monitor.conf= mit der die Konfiguration des Dienstes durchgeführt werden kann.
+
+   3. *Docker-Image aus Dockerfile erzeugen:*
+      Als nächstes wird aus dem Dockerfile ein Image erzeugt.
+      Mit dem Befehl
+      #+BEGIN_src sh
+docker build -t cs.hm.edu.shm.monitoring.service .
+      #+END_src
+      kann aus dem Dockerfile ein Image erzeugt werden, welches das Tag =cs.hm.edu.shm.monitoring.service= besitzt.
+
+   4. *Docker-Container starten:*
+      Jetzt muss der Docker-Container mit dem folgenden Befehl gestartet werden.
+      #+BEGIN_SRC sh
+docker run --net=host --restart=always
+  [--volume=/host-dir:/container-dir:ro]
+  d --name cs.hm.edu.shm.redis.monitoring.service
+  -t cs.hm.edu.shm.monitoring.service:latest
+      #+END_src
+      \\
+      Die Option ~--restart=always~ sorgt dafür, dass der Dienst nach einem Absturz wieder gestartet wird.
+      \\
+      Die Optionen ~--volume=/host-dir:/container-dir:ro~ müssen bei einer Logdateiüberwachung angegeben werden, damit die Logdatei von dem Container zugegriffen werden kann.
+      Diese Option und die Konfiguration des Dienstes müssen genau abgestimmt werden, damit der Dienst korrekt auf die Logdateien zugreifen kann.
+
+   5. *Container über Init-Prozess starten und stoppen:*
+      Wie bereits bei der Installation als Init-Dienst beschrieben, muss ein Init-Skript erstellt werden.
+      Dieses Initstkript muss lediglich den Docker-Container starten.
+
+** Beispielkonfiguration des Dienstes
+   Um ein besseres Verständnis für die Konfiguration des Dienstes zu erlangen, werden in diesem Abschnitt einige Beispiele dagelegt.
+   Die vorgestellten Konfigurationszeilen sind von dem verwendeten System Ubuntu 14.04 und den Programmversionen abhängig.
+   Diese dienen daher lediglich als Beispiele und müssen für jedes System angepasst werden.
+
+   1. *Ram-Last überwachen:*
+      Der Befehl =free= kann verwendet werden, um den freien und belegten Arbeitsspeicher des Systems anzuzeigen.
+      Somit ist dieser Befehl ideal geeignet, um die RAM-Last eines Systems zu überwachen.
+      Damit das Dashboard die Ram-Last grafisch formatiert anzeigt,
+      muss bei der Konfiguration das 3. Feld auf "`ram"' gesetzt werden.
+      Darüberhinaus muss die Ausgabe des Befehls noch formatiert werden.
+      Folgende Konfigurationszeile ist zum Beispiel geeignet, um mit der Programmversion =procps-ng 3.3.9= von =free= die Ram-Last zu überwachen:
+      #+BEGIN_src sh
+      c#free | sed '1d' | sed '2,$d' | \
+        awk '{print $2, $3}'#RAM#5000
+      #+END_src
+
+   2. *CPU-Last überwachen:*
+      Die CPU-Auslastung kann mit dem Befehl =mpstat -P ALL= ausgegeben werden.
+      Wie bereits bei der Überwachunng der Ram-Last erwähnt wurde, muss die Ausgabe noch formatiert werden und
+      das 3. Feld auf "`CPU"' gesetzt werden, um eine formatierte Ausgabe auf dem Dashboard zu erreichen.
+      Folgende Konfigurationszeile kann mit der Version =sysstat version 10.2.0= von "`mpstat"' zur Überwachung der CPU-Last verwendet werden:
+      #+BEGIN_src sh
+      mpstat -P ALL | sed '1,3d' | awk '{print $2, $12}'
+      #+END_src
+   3. *Festplattenspeicher überwachen:*
+      Der freie Speicherplatz auf der Festplatte, kann mit dem Befehl ~df -h~ angezeigt werden.
+      Die Ausgabe muss wie bei den Beispielen zuvor noch formatiert werden
+      und das 3. Feld auf "`hdd"' gesetzt werden, damit das Dashboard eine formatierte Ausgabe erzeugt.
+      Die Konfigurationszeile lautet:
+      #+BEGIN_src sh
+      c#df -h | grep '^/dev/[hs]d' | \
+        awk '{s+=$2; p+=$3} END {print s, p}'#HDD#5000
+      #+END_src
+      Es wurde die Programmversion "`8.21"' von df verwendet.
+
+   4. *Fehlgeschlagene SSH-Logins überwachen:*
+      In der Datei\\ =/var/log/auth.log= werden alle Versuche protokoliert sich an das System anzumelden.
+      Dazu zählen auch Anmeldungen über SSH.
+      Das bedeutet, dass eine Überwachung dieser Datei sinnvoll wäre, um fehlgeschlagene Anmeldeversuche zu überwachen.
+      Bei einer Logdateiüberwachung werden alle eintreffenden Meldungen überwacht.
+      Das bedeutet, dass es auch zu einer Meldung kommt, wenn lediglich eine erfolgreiche Anmeldung eines Benutzers durchgeführt wurde.
+      Um dies zu verhindern kann ein reguläre Ausdruck bei der Konfiguration angegeben werden.
+      Mit den beiden folgenden Konfigurationszeilen kann die Überwachung von fehlgeschlagenen Anmeldeversuchen durchgeführt werden.
+   #+BEGIN_SRC sh
+l#/var/log/auth.log#logfile#10000#WARNING#.*sshd.*Failed.*
+l#/var/log/auth.log#logfile#10000#WARNING#.*authentication failure.*
+   #+END_src
+
+* Evaluation
+  In diesem Kapitel wird der entwickelte Überwachungsdienst evaluiert.
+  Es wurde eine Evaluation der SSL-Verschlüsselung durchgeführt.
+
+** Evaluation der SSL-Verschlüsselung
+   In diesem Abschnitt wird die Evaluation der SSL-Verschlüsselung erleutert.
+   Es wurde ein Black-Box-Test durchgeführt, dabei ist das Vorgehen dem OWASP Guide\footnotemark angelehnt.
+   #+LaTeX: \footnotetext{\url{https://www.owasp.org/index.php/Testing_for_SSL-TLS_(OWASP-CM-001)\#Black_Box_Test_and_example}}
+
+   1. *Port-scanning mit nmap:* Ein Angreifer würde vermutlich zunächst die offenen Ports des Systems scannen, um einen Angriffspunkt zu finden.
+      Es gibt bereits viele Werkzeuge, um Port-scanning durchzuführen.
+      Zu den bekanntesten Werkzeuge zählen "`Nessus\footnotemark"'
+      #+LaTeX: \footnotetext{\url{http://www.tenable.com/products/nessus-vulnerability-scanner}}
+      und "`nmap\footnotemark"'.
+      Für die Evaluation wurde das Kommandozeilenwerkzeug nmap verwendet.
+      Die nachfolgende Ausgabe zeigt den durchgeführten Port-scan.
+      #+LaTex: \footnotetext{\url{https://nmap.org/}}
+      #+CAPTION: Port-scanning mit nmap
+      #+ATTR_LATEX: :placement [H] :width 0.8\textwidth
+      [[./russwurm/nmap.png]]
+      Es gibt drei offene Ports.
+      Der Port 22 wird für eingehende SSH-Verbindungen verwendet und der Port 631 ist für Drucker reserviert.
+      Der Port 9090 ist der Überwachungsserver, der eine SSL-Verbindung auf Port 9090 entgegennimmt.
+
+   2. *Überprüfe SSL-Protokoll mit OpenSSL:* OpenSSL\footnotemark bietet das
+      Kommandozeilenwerkzeug "`s_client"' an, um einen einfachen Client zu simulieren.
+      Dieses Werkzeug kann zum Beispiel dazu verwendet werden, um einen SSL-Server zu testen, welche Protokolle er unterstützt.
+      Dadurch kann erkannt werden, ob der SSL-Server eine SSL-Verbindungen mit einem unsicheren Protokoll eingeht.
+      Das nachfolgende Bild zeigt einen Test, ob der SSL-Server eine SSL-Verbindung mit den von OWASP für unsicher angegebenen Protokollen SSL und TLSv1.0 annimmt.
+      #+LaTeX: \footnotetext{\url{https://www.openssl.org/}}
+      #+CAPTION: Testen des SSL-Servers mit s_client
+      #+ATTR_LATEX: :placement [H] :width 0.8\textwidth
+      [[./russwurm/s_client.png]]
+      Die Ausgabe zeigt einen Fehler.
+      Das Bedeutet, dass von dem Server keine SSL-Protokolle und das Protokoll TLSv1.0 nicht unterstützt wird.
+
+   3. *sslScan:* Das Kommandozeilenwerkzeug sslScan\footnotemark  überprüft die unterstützten SSL-Ciphersuites des Servers und markiert die unsicheren Ciphersuites.
+      Die nachfolgende Ausgabe zegt einen Ausschnitt des durchgeführten Back-Box Tests mit sslScan.
+      #+LaTeX: \footnotetext{\url{https://github.com/rbsec/sslscan}}
+      #+CAPTION: Testen des SSL-Server mit sslScan
+      #+ATTR_LATEX: :placement [H] :width 0.8\textwidth
+      [[./russwurm/sslScan.png]]
+      Die Evaluation hat ergeben, dass keine unsicheren Ciphersuites von dem SSL-Server unterstützt werden.
+
+   4. *Wireshark:*
+      Um den Ablauf des SSL-Handshakes zu evaluieren, wurde das Werkzeugt Wireshark \footnotemark verwendet.
+      Der nachfolgende Sceenshot zeigt den Ablauf einer SSL-Verbindung mit dem Überwachungsserver.
+      #+LaTeX: \footnotetext{\url{https://www.wireshark.org/}}
+      #+CAPTION: Evaluation des Protokollverlaufs mit wireshark
+      #+ATTR_LATEX: :placement [H]
+      [[./russwurm/wireshark.png]]
+      In dem Mitschnitt ist ersichtlich, dass ein korrekter SSL-Handshake durchgeführt wird anschließend zwei Datenpakete versendet werden und die Verbindung wieder geschlossen wird.
+      Die Analyse des Datenverkehrs hat außerdem gezeigt, dass der Server ein Client-Zertifikat anfordert, um eine Verbindung aufzubauen.
+
+** Integrationstest mit dem Dashboard
+   Um zu überprüfen, ob der Überwachungsdienst die Anforderungen erfüllt, wurde ein Integrationstest zusammen mit dem Dashboard durchgeführt.
+   Dabei wurde der Überwachungsdienst mit verschiedenen Konfigurationsszenarien ausgeführt.
+   Anschließend wurde die resultierende Ausgabe auf dem Dashboard betrachtet.
+
+* Fazit und Ausblick label:md_fazit
+  Es wurde ein Überwachungsdienst implementiert, der viele verschiedene Aspekte eines Systems überwachen kann.
+  Dabei wurde der Schwerpunkt auf die Vertraulichkeit und Integrität der Datenübertragung gelegt.
+  Zusätzlich dazu wurde auf eine dynamische Konfiguration gesetzt, damit der Überwachungsdienst für möglichst viele Anwendungsfälle verwendet werden kann.
+  Über den in Abschnitt [[ref:daemon_inst]] angegebenen Anforderungen hinaus wurde eine Verfügbarkeitsüberwachung realisiert.
+  Der Überwachungsdienst kann noch durch einige Aspekte erweitert werden.
+  Diese werden im folgenden Aufgezählt.
+
+  * Im Moment wird der Vorgang eines Logrotates von dem Überwachungsdienst entdeckt.
+    Daraufhin wird die zuletzt gelesene Zeile der Logdatei korregiert.
+    Es existieren jedoch noch Szenarien, bei denen durch ein Logrotate Überwachungslücken auftreten.
+    Diese Überwachungslücken könnten in einer zukünftigen Version geschlossen werden.
+
+  * Bei Meldungen der Systemüberwachung, die mit "`CRITICAL"' eingestuft sind,
+    könnte der Überwachungsserver eine mit S/MIME (Secure / Multipurpose Internet Mail Extensions) verschüsselte E-Mail an einen vorgegebenen Verteiler versenden.
+
+  * Es wird zwar eine Verfügbarkeitsüberwachung von dem Überwachungsserver durchgeführt, jedoch werden noch keine Meldungen versendet, wenn ein kritischer Systemzustand eintritt
+    In einer zukünftigen Version könnte der Überwachungsserver eine Meldung versendet, falls das System nicht mehr Verfügbar ist oder die Systemüberwachung ausfällt.
+
+  * Im dieser Version verwenden alle Clients das selbe Zertifikat
+    Eine sicherere Variante wäre es, wenn jeder Client ein eigenes Zertifikat benötigt, um mit dem Überwachungsserver kommunizieren zu können
+    Dadurch wäre, falls durch einen Angriff der private Schlüssel bekannt wird nicht die komplette Kommunikation gefährdet.
+
+  * Aufgrund von Importregulierungen verwendet der Server nicht die stärksten Verschlüsselungsalorithmen die Verfügbar sind.
+    Die SSL-Konfiguration des Überwachungsservers könnte nach Installation der kryptografischen Erweiterung der
+    Verschlüsselungsalgorithmen\footnotemark erneut durchgeführt werden.
+    #+LaTeX: \footnotetext{\url{http://www.oracle.com/technetwork/java/javase/downloads/jce8-download-2133166.html}}

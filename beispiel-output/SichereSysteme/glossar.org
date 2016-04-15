@@ -1,0 +1,208 @@
+﻿* Glossar
+  Der folgende Abschnitt liefert eine Einführung in die verwendeten Programme
+  und Technologien.
+
+** Docker
+   Docker ist ein in der Programmiersprache Go entwickeltes Open Source Projekt,
+   welches seit 2013 existiert. Es hat sich zum Ziel gesetzt, die automatisierte
+   Bereitstellung von Applikationen innerhalb von Software Containern zu
+   ermöglichen. Dazu stellt Docker eine Abstraktionsebene zur Verfügung um auf
+   bestehende Funktionalität des Linux Kernel zuzugreifen. Zu den Funktionen gehören
+   cgroups (Control Groups) und kernel-namespace.
+
+   Cgroups ermöglichen es, Ressourcen für eine Sammlung von Prozessen zu
+   limitieren, verwalten und isolieren. Bei den Ressourcen handelt es sich
+   beispielsweise um die verwendete CPU Leistung, I/O Zugriffe oder Netzwerk
+   Ressourcen.
+
+   Kernel Namespace fassen eine Gruppe von Prozessen zu einer Einheit zusammen. Die
+   Kommunikation ist nur mit dem Elternprozess und untereinander möglich.
+
+   Diese und weitere Funktionen erlauben es, getrennte Container, innerhalb eines
+   gemeinsamen Host zu betreiben, ohne den Overhead einer Virtuellen Maschine.
+   [[cite:docker_glossar]]
+
+*** Unterschied zwischen Docker und Virtuellen Maschinen
+    Abbildung [[ref:abb_vm]] zeigt exemplarisch die Architektur eines Systems
+    bei der Verwendung einer oder mehrere virtueller Maschinen.
+
+    #+CAPTION: Überblick Virtuelle Maschinen label:abb_vm \footnotemark
+    #+ATTR_LATEX: :placement [H] :width 0.5\textwidth
+    [[./placht/images/vm.png]]
+    #+LaTeX: \footnotetext{\url{https://www.docker.com/sites/default/files/what-is-docker-diagram.png}}
+
+    Jede virtuelle Maschine enthält das Gast Betriebssystem, eine oder mehrere
+    Anwendungen und die dazugehörigen Abhängigkeiten und Bibliotheken.
+
+
+    Im Vergleich dazu zeigt Abbildung [[ref:abb_docker]] exemplarisch
+    die Architektur eines Systems bei der Verwendung von Docker.
+
+    #+CAPTION: Überblick Virtuelle Maschinen label:abb_docker \footnotemark
+    #+ATTR_LATEX: :placement [H] :width 0.5\textwidth
+    [[./placht/images/docker.png]]
+    #+LaTeX: \footnotetext{\url{https://www.docker.com/sites/default/files/what-is-vm-diagram.png}}
+
+    Container enthalten die Applikation inklusive aller Abhängigkeiten,
+    teilen sich allerdings den Kernel mit anderen Containern,
+    was zu einem deutlichen geringeren Ressourcenverbrauch führt.
+
+    Sofern möglich, werden die einzelnen Teile der Applikation als
+    Docker Container zur Verfügung gestellt.
+
+*** Dockerfiles
+    Zur automatisierten Erstellung von Docker Images kann ein Dockerfile bereitgestellt werden.
+    Ein Dockerfile ist ein Text Dokument, das alle Kommandos enthält,
+    die zur Erstellung des images notwendig sind.
+
+    Listing [[ref:lis_docker]] zeigt ein beispielhaftes
+    Dockerfile[fn:: https://docs.docker.com/engine/userguide/dockerimages/]
+
+    #+CAPTION: Dockerfile label:lis_docker
+    #+BEGIN_SRC Dockerfile
+FROM ubuntu:14.04
+MAINTAINER Kate Smith <ksmith@example.com>
+RUN apt-get update && apt-get install -y ruby ruby-dev
+RUN gem install sinatra
+    #+END_SRC
+
+    Im ersten Schritt wird angegeben, welches Basisimage erweitert werden soll.
+    Die Zeile MAINTAINER gibt an wer für die Verwaltung zuständig ist.
+    Im nächsten Schritt wird mittels RUN das Programm apt-get verwendet
+    um die Paketlisten zu aktualisieren und Ruby zu installieren.
+    Als letztes wird ebenfalls mit dem RUN Befehl gem verwendet um Sinatra zu installieren.
+
+    Mittel dem Befehl docker build kann das Image erstellt werden.
+    Dockerfiles bieten eine einfache Möglichkeit portable und
+    nachvollziehbare images zu erstellen.
+
+    Eine vollständige Beschreibung inklusive aller Kommandos ist unter [[cite:dockerfile]]
+    zu finden.
+
+*** Compose label:compose
+    Compose ist ein Werkzeug um Anwendung zu definieren und zu starten,
+    die aus mehreren Docker Container bestehen. Dazu wird eine Datei im .yml Format benötigt
+    Listing [[ref:fig_compose]] zeigt ein beispielhaftes docker-compose
+    File[fn:: https://docs.docker.com/compose/],
+    das eine Anwendung definiert, die aus zwei Containern besteht.
+    #+CAPTION: Compose label:fig_compose
+    #+BEGIN_src yaml
+web:
+  build: .
+  ports:
+   - "5000:5000"
+  volumes:
+   - .:/code
+  links:
+   - redis
+redis:
+  image: redis
+     #+END_src
+    Eine vollständige Befehlsreferenz ist unter [[cite:compose]] zu finden.
+
+** Boot2docker
+boot2docker ist eine leichtgewichtige Linux Distribution, basierend auf Tiny Core Linux.
+Sie wurde speziell für den Betrieb von Docker Container entwickelt[[cite:boot2docker]].
+Boot2docker lässt sich komplett im RAM starten und verbraucht ca. 27 MB.
+Ursprünglich diente boot2docker dazu, Docker unter Windows und MacOS zu benutzen,
+da beide Docker noch nicht nativ unterstützen.
+Seit 03.05.2015 ist boot2docker deprecated und wurde durch das Tool docker-machine
+ersetzt [[cite:docker-machine]].
+
+** Rancher OS
+Rancher OS ist eine weitere leichtgewichtige Linux Distribution, speziell für den
+Einsatz von den Docker.
+Rancher OS besteht komplett aus Docker Containern.
+Abbildung [[ref:abb_rancher-os]] zeigt den schematischen Aufbau von RancherOS.
+\\
+#+CAPTION: Architektur von RancherOS label:abb_rancher-os \footnotemark
+#+ATTR_LATEX: :placement [H] :width 0.7\textwidth
+[[./placht/images/dashboard/rancher-os.png]]
+\\
+Beim starten des Systems, werden zwei Instanzen von Docker gestartet. Die erste
+Instanz (PID1) dient dabei als Ersatz eines klassischen Init Systems.
+Die zweite Instanz startet und verwaltet die Docker Container des Benutzers.
+\\
+Die beiden Docker Instanzen laufen nebeneinander, das heißt, Änderungen an der
+einen Instanz haben keine Auswirkungen auf die anderen.
+RancherOS befindet sich aktuell in einer frühen Entwicklungsphase, mit häufigen,
+inkompatiblen Änderungen. Dadurch ist RancherOS nicht für den Produktiveinsatz
+geeignet[[cite:rancher-os]].
+
+** Redis
+   Redis ist ein Open Source (BSD) lizenzierter, in-memory Datenstruktur Speicher,
+   der sich als Cache, Datenbank und Message Broker benutzen lässt. [[cite:redis_glossar]]
+   Zu den unterstützten Datenstrukturen gehören unter anderem:
+   - Strings
+   - Hashes
+   - Listen
+   - Sets
+   Redis wird sowohl als zentrale Datenbank der ermittelten Daten, als auch als
+   Zwischenspeicher innerhalb des ELK Stack verwendet.
+
+** Tomcat
+   Apache Tomcat ist ein weit verbreiteter Open Source (Apache License) Webserver
+   und Java Applikationsserver, der es ermöglicht Anwendungen auf Servlet Basis
+   auszuführen. [[cite:tomcat_glossar]]
+   Die verwendete Instanz ist wie unter Abschnitt [[ref:tomcat]] beschrieben extra abgehärtet
+   und sicher konfiguriert.
+
+** Alpine Linux
+   Alpine Linux ist eine Security-orientierte,
+   leichtgewichtige Linux Distribution,
+   die sich Aufgrund ihrer geringen Größe (ca. 5MB)
+   als Basis Image für Docker-Images großer Beliebtheit erfreut.
+   [[cite:alpine_glossar]]
+
+** Logstash
+   Logstash ist ein Open Source Programm zur Normalisierung
+   und Zentralisierung von Logdaten aus verschiedensten Quellen[[cite:elastic_docs]].
+
+   Logstash lässt sich über eine relativ einfache Domain Specific
+   Language (DSL) in JRuby konfigurieren.
+   Dabei gibt man Logstash an, aus welcher Quelle es Daten beziehen soll.
+   Im einfachsten Fall sind das Dateien, möglich sind aber auch IRC-Channel,
+   Twitter-Feeds oder REST-Schnittstellen.
+   Zusätzlich muss angegeben werden, wohin diese Daten geschrieben werden sollen.
+   Meistens ist das für Logstash Elasticsearch,
+   möglich sind hier aber auch Dateien,
+   Emails, diverse Chat-Clients, andere Datenbanken oder Webdienste.
+   Um Daten aufzubereiten oder mit zusätzlichen Informationen anzureichern,
+   kann man Filter festlegen,
+   welche auf Datensätze mit bestimmten Mustern angewendet werden.
+
+** Elasticsearch
+   Elasticsearch ist eine Open Source Volltext-Suchmaschine,
+   welche auf dem Apache Projekt Lucene basiert[[cite:elastic_docs]].
+
+   Elasticsearch speichert in einer Schema-losen,
+   Volltext-indizierten in-Memory NoSQL-Datenbank.
+   Dadurch ist es möglich, ohne Änderungen an einem Datenbankschema,
+   Logdaten mit neuen oder geänderten Formaten zu speichern.
+   Nach einem Update der Indizes können diese neuen Formate auch in Volltext-Suchen verwendet werden.
+
+** Kibana
+   Kibana ist ein Open Source Plugin
+   und Web-Frontend für Elasticsearch um Daten zu visualisieren[[cite:elastic_docs]].
+   Dadurch lassen sich Ausgaben von Elasticsearch-Queries in Diagrammen
+   oder auf Zeitachsen plotten.
+
+** Shield
+   Ähnlich wie Elasticsearch, Logstash und Kibana wird Shield von Elastic entwickelt,
+   im Gegensatz zu den vorher genannten Produkten ist Shield allerdings nicht Open Source.
+   Shield ist eine Zusatzsoftware für Elastic-Produkte um Authentifizierung,
+   Autorisierung und Verschlüsselung zu ermöglichen,
+   da dies standardmäßig nicht möglich ist[[cite:elastic_docs]].
+
+** stunnel
+   stunnel ist eine Open Source Software,
+   mit dem eine bestehende Client-Server-Architektur nachträglich mit
+   TLS-Verschlüsselung und Signierung ausgestattet werden kann[[cite:stunnel_docs]].
+
+** nginx
+   Nginx ist ein sehr leichtgewichtiger Open Source Webserver, der sich
+   besonders für die Benutzung als Reverse Proxy eignet[[cite:nginx_docs]].
+   In diesem Projekt werden wir ihn als Reverse Proxy für Kibana verwenden.
+
+** eCryptfs
+   eCrytptfs ist ein kryptographisches Dateisystem für Linux[[cite:ecryptfs_docs]].

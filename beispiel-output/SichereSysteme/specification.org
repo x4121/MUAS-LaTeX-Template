@@ -1,0 +1,254 @@
+* Spezifikation
+** Funktionalität
+   Zentrale Überwachung (Monitoring) der Systeme und Dienste in einem Heimnetzwerk und
+   Visualisierung dieser. Der Fokus innerhalb der einzelnen Komponenten wie z.B. Datenbank
+   und Webserver liegt auf der Härtung und Isolation mittels Docker.
+
+** Existierende Lösungen zur Systemüberwachung
+   Es gibt bereits einige Softwarelösungen, um ein zentrales Monitoringsystem zu realisieren.
+   Im folgenden werden die Produkte "`Nagios"' und "`Splunk"' genauer betrachtet.
+
+   * *Nagios:* Das Unternehmen Nagios beschäftigt sich mit der Realisierung einer
+     Überwachung von IT-Infrastrukturen.
+     Es können Systemmetriken, Netzwerkprotokolle, Anwendungen, Dienste, Server,
+     und die Netzwerkinfrastruktur überwacht werden.
+
+   * *Splunk:* Bei Splunk handelt es ebenfalls sich um ein großes Unternehmen,
+     dass sich darauf spezialisiert hat mit ihrer Software beliebige Maschinendaten
+     mehrerer Systeme überwachen zu können.
+     Das nachfolgenden Bild zeigt die verschiedenen Daten, die mit Splunk überwacht werden können.
+     #+CAPTION: Splunk Architektur \footnotemark
+     #+ATTR_LATEX: :placement [H]
+     [[./Splunk.PNG]]
+
+     #+LaTeX: \footnotetext{\url{http://www.splunk.com/en_us/resources/operational-intelligence.html}}
+
+** Detailfunktionalitäten
+   * Benutzung einer speziellen Linux Distribution für den Einsatz von Docker
+     * boot2docker[fn:: http://boot2docker.io/]
+     * RancherOS[fn:: http://rancher.com/rancher-os/]
+   * Monitoring Webapplikation: Beim Monitoring wird unterschieden zwischen
+     * lokalem Monitoring:
+       * SSH: Zugriffe, Anmeldeversuche, etc...
+       * Docker Container: Welche Container laufen gerade, welche sind vorhanden, Starten/Stoppen, etc...
+       * Systemparameter: Freier Festplattenspeicher, laufende Prozesse, RAM, CPU, etc...
+     * Remote Monitoring (andere Gruppen):
+       * Logauswertung
+       * Applikationsüberwachung
+       * IDS Überwachung
+       * etc...
+   * Authentifizierung innerhalb der Webapplikation gegenüber GitHub mittels OAuth
+     * Speichern der erfolgreichen und fehlgeschlagenen Authentifizierungen innerhalb einer
+       Datenbank und Visualisierung dieser
+     * Autorisierung über GitHub-Teams
+       * Mitglieder des SichHeimMonitor GitHub Teams dürfen alles (wobei alles noch zu definieren ist)
+       * GitHub Mitglieder haben eingeschränkten Zugriff (wobei eingeschränkt noch zu definieren ist)
+       * Anonyme Benutzer haben keinen Zugriff
+   * Konfiguration und Härtung des ELK Stack (Elasticsearch, Logstash & Kibana)
+     * Der ELK Stack ist eine echtzeitfähige Lösung zur Analyse
+       verschiedener Arten von strukturierten und unstrukturierten Daten.
+     * Sammeln und Aufbereiten der Logdaten lokaler und externer Prozesse mit Logstash
+     * Speicherung der Daten in Elasticsearch (evtl. anbieten einer API)
+     * Visuelle Darstellung der Logdaten mit Kibana (Monitoring Webapplikation)
+
+** Sicherheit
+   * Authentifizierung mittels OAuth
+   * Autorisierung durch GitHub-Team
+   * Härtung durch Virtualisierung/Isolation
+   * Isolation der einzelnen Komponenten
+   * Sichere Kommunikation zur Webapplikation
+   * Sichere Speicherung der Daten
+
+** Schnittstellen
+   * Logstash-Shipper (Sammeln Logdaten der anderen Gruppen)
+   * Remotedaemon (Falls Gruppen kein konventionelles Logging verwenden,
+     Erfassen der Systemparameter)
+
+** Architektur-/Realisierungsübersicht als Grafik
+   In der folgenden Grafik ist die Gesamtarchitektur des sicheren Heimmonitoring Systems dargestellt.
+   Die Blauen Vierecke stehen hierbei für einzelne und isolierte Docker Images.
+   #+CAPTION: Sicheres Heimmonitoring Architektur
+   #+ATTR_LATEX: :placement [H]
+   [[./SichHeimMonitorArchitektur.png]]
+
+** Schutzbedarfsfestellung
+
+*** Funktionalität label:sec_spec_func
+    Für die Schutzbedarfsfeststellung liegen folgende Anwendungsfälle zugrunde
+
+    #+ATTR_LATEX: :environment tabularx :align l|X :width \linewidth
+    | *Anwendungsfall* | *Beschreibung*                                                                                         |
+    |------------------+--------------------------------------------------------------------------------------------------------|
+    | UC1\RowOdd       | Der Benutzer hat die Möglichkeit, eine grafische Logauswertung (andere Dienste/Systeme) durchzuführen. |
+    | UC2              | In der Webapp können die einzelnen Dienste gesteuert werden.                                           |
+    | UC3\RowOdd       | Es gibt die Möglichkeit einzelne Dienste in der Webapp aufzulisten.                                    |
+    | UC4              | Der Überwachungsserver kann über die Webapp verwaltet werden.                                          |
+    | UC5\RowOdd       | Ein Benutzer kann einen anonymisierten Browser über die Webapp starten.                                |
+
+*** Sicherheitsanforderungen
+    In diesem Abschnitt werden die Sicherheitsanforderungen definiert und gewichtet.
+    Bei den Gewichtungen wird unterschieden zwischen Gering, Mittel und Hoch.
+    Die folgenden Sicherheitsanforderungen werden betrachtet:
+
+    * Vertraulichkeit (Confidentiality): Die Informationen, Anwendungen,
+      Dienste usw. dürfen nur Berechtigten zugänglich sein.
+      * Gewichtung: Hoch
+      * Begründung: Im Monitoringsystem werden teilweise vertrauliche/personenbezogene Daten verarbeitet.
+      * Beispiel: Gespeicherte Logdaten aus der Heimüberwachung.
+
+    * Integrität (Integrity): Die Informationen, Anwendungen,
+      Dienste usw. dürfen nur von Berechtigten verändert werden.
+      * Gewichtung: Hoch
+      * Begründung: Durch unerlaubtes Bearbeiten von Informationen kann dem Benutzer ein falsches Gefühl von Sicherheit vermittelt werden.
+      * Beispiel: Die Heimüberwachung stellt einen Einbruch fest,
+        die Hinweise darauf werden vom Einbrecher aus den Logdaten entfernt.
+
+    * Verfügbarkeit (Availability): Die Informationen, Anwendungen,
+      Dienste usw. sind in einer zugesicherten Zeit zugänglich.
+      * Gewichtung: Mittel
+      * Begründung: Die angebotenen Funktionen dienen lediglich der Bequemlichkeit.
+      Die überwachten Anwendungen sind davon nicht betroffen.
+
+    * Authentizität (Authenticity): Die Echtheit/Urheberschaft einer Information,
+      Anwendung, Dienst usw. ist nachweisbar.
+      * Gewichtung: Hoch
+      * Begründung: Logdaten können kritische Informationen enthalten, z.B. den aktuellen
+      Systemstatus. Wird dieser von aussenstehenden manipuliert können gezielt falsche Infomrationen
+      für Angriffe benutzt werden. 
+
+    * Datenschutz (Privacy): Der Schutz personenbezogener Daten vor Mißbrauch und der Schutz der Privatsphäre.
+      * Gewichtung: Hoch
+      * Begründung: Im Monitoringsystem werden teilweise vertrauliche/personenbezogene Daten verarbeitet.
+      * Beispiel: Gespeicherte Logdaten aus der Heimüberwachung.
+
+*** Gefahren
+    Für die angebotenen Funktionalitäten haben wir im Hinblick auf den Gefährdungskatalog
+    der Elementaren Gefährdungen[[cite:bsi_itg]] des IT-Grundschutz-Kataloges
+    folgende relevante Gefahren ermittelt:
+    #+ATTR_LATEX: :environment tabularx :align l|B{1.8}L{0.45}B{0.75} :width \linewidth
+    | *Gefahr*   | *Beschreibung*                                                     | *Referenz in BSI*                   | *Wirkt auf Anforderung*                     |
+    |------------+--------------------------------------------------------------------+-------------------------------------+---------------------------------------------|
+    | G01\RowOdd | Ausfall der Stromversorgung oder des Kommunikationsnetze           | G 0.8ff                             | Verfügbarkeit                               |
+    | G02        | Ausspähung oder Abhören von Informationen                          | G 0.14f                             | Vertraulichkeit, Datenschutz                |
+    | G03\RowOdd | Verlust/Diebstahl von Geräten, Datenträgern oder Dokumenten        | G 0.16f, G\nbsp{}0.19, G\nbsp{}0.45 | Vertraulichkeit, Verfügbarkeit, Datenschutz |
+    | G04        | Manipulation von Hard- oder Software                               | G 0.21                              | Authentizität, Integrität                   |
+    | G05\RowOdd | Manipulation von Informationen, Einspielen von Nachrichten         | G 0.22, G\nbsp{}0.43, G\nbsp{}0.46  | Authentizität, Integrität                   |
+    | G06        | Unbefugtes Eindringen in IT-Systeme                                | G 0.23                              | Vertraulichkeit, Datenschutz                |
+    | G07\RowOdd | Zerstörung von Geräten oder Datenträgern, Sabotage                 | G 0.24, G\nbsp{}0.41                | Verfügbarkeit                               |
+    | G08        | Ausfall/Fehlfunktion von Geräten oder Systemen                     | G 0.25f                             | Verfügbarkeit                               |
+    | G09\RowOdd | Software-Schwachstellen oder -Fehler, Schadprogramme               | G 0.28, G\nbsp{}0.39                | alle genannten                              |
+    | G10        | Unberechtigte Nutzung oder Administration von Geräten und Systemen | G 0.30                              | alle genannten                              |
+    | G11\RowOdd | Missbrauch personenbezogener Daten                                 | G 0.38                              | Vertraulichkeit, Datenschutz                |
+    | G12        | Unbefugtes Eindringen in Räumlichkeiten                            | G 0.44                              | Vertraulichkeit, Datenschutz                |
+
+    Nicht näher betrachtet werden dabei Gefahren, bei denen der Schaden
+    am Monitoring-System gegenüber anderweitig entstehender Schäden nicht wirklich
+    relevant ist, beispielsweise Feuer oder Naturkatastrophen.
+
+*** Risiken
+    Um das Risiko einzuschätzen, wird folgenden Risikotabelle verwendet:
+    #+ATTR_LATEX: :environment tabularx :align X|cccc :width \linewidth
+    | *Schadenspotential/*                                |          |            |        | *sehr* |
+    | *Eintrittswahrscheinlichkeit*                       | *selten* | *manchmal* | *oft*  | *oft*  |
+    |-----------------------------------------------------+----------+------------+--------+--------|
+    | *existenzbedrohend (>\nbsp{}50.000\nbsp{}€)*\RowOdd | *hoch*   | *hoch*     | *hoch* | *hoch* |
+    | *hoch (1-50k €)*                                    | mittel   | mittel     | *hoch* | *hoch* |
+    | *mittel (bis 1000 €)*\RowOdd                        | gering   | gering     | mittel | *hoch* |
+    | *gering*                                            | gering   | gering     | gering | mittel |
+
+    Durch Betrachtung der Eintrittswahrscheinlichkeit und des Schadenspotentials
+    der einzelnen Gefahren, wird ermittelt, welche Risiko diese darstellt.
+
+**** G01: Ausfall der Stromversorgung oder des Kommunikationsnetze
+     - Schaden: gering
+     - Eintrittswahrscheinlichkeit: manchmal
+     - Resultierendes Risiko: gering
+     - Begründung: Stromversorgung und Internetverbindung sollte stabil sein (Monitoring ist bei Ausfall kleinste Sorge)
+**** G02: Ausspähung von Informationen oder Abhören
+     - Schaden: mittel
+     - Eintrittswahrscheinlichkeit: manchmal
+     - Resultierendes Risiko: gering
+     - Begründung: Monitoring findet komplett im internen Netzwerk statt. Gefahr nur durch Gäste oder Einbrecher.
+**** G03: Verlust/Diebstahl von Geräten, Datenträgern oder Dokumenten
+     - Schaden: hoch
+     - Eintrittswahrscheinlichkeit: selten
+     - Resultierendes Risiko: *mittel*
+     - Begründung: Gefahr nur durch Gäste oder Einbrecher.
+**** G04: Manipulation von Hard- oder Software
+     - Schaden: mittel
+     - Eintrittswahrscheinlichkeit: manchmal
+     - Resultierendes Risiko: gering
+     - Begründung: Gefahr nur durch Gäste oder Einbrecher.
+**** G05: Manipulation von Informationen, Einspielen von Nachrichten
+     - Schaden: mittel
+     - Eintrittswahrscheinlichkeit: manchmal
+     - Resultierendes Risiko: gering
+     - Begründung: Monitoring findet komplett im internen Netzwerk statt. Gefahr nur durch Gäste oder Einbrecher.
+**** G06: Unbefugtes Eindringen in IT-Systeme
+     - Schaden: mittel
+     - Eintrittswahrscheinlichkeit: selten
+     - Resultierendes Risiko: gering
+     - Begründung: Gefahr nur durch Gäste oder Einbrecher.
+**** G07: Zerstörung von Geräten oder Datenträgern, Sabotage
+     - Schaden: hoch
+     - Eintrittswahrscheinlichkeit: selten
+     - Resultierendes Risiko: gering
+     - Begründung: Gefahr nur durch Gäste oder Einbrecher.
+**** G08: Ausfall/Fehlfunktion von Geräten oder Systemen
+     - Schaden: gering
+     - Eintrittswahrscheinlichkeit: manchmal
+     - Resultierendes Risiko: gering
+     - Begründung: Verfügbarkeit des Monitoring-Systems wird als weniger wichtig angesehen.
+**** G09: Software-Schwachstellen oder -Fehler, Schadprogramme
+     - Schaden: mittel
+     - Eintrittswahrscheinlichkeit: oft
+     - Resultierendes Risiko: *mittel*
+     - Begründung: Gefahr nicht auszuschließen, erstreckt sich über alle Anforderungen.
+**** G10: Unberechtigte Nutzung oder Administration von Geräten und Systemen
+     - Schaden: mittel
+     - Eintrittswahrscheinlichkeit: sehr oft
+     - Resultierendes Risiko: *hoch*
+     - Begründung: Ohne Authentifizierung von jedem Teilnehmer im Netz ausnutzbar.
+**** G11: Missbrauch personenbezogener Daten
+     - Schaden: mittel
+     - Eintrittswahrscheinlichkeit: oft
+     - Resultierendes Risiko: *mittel*
+     - Begründung: Gefahr nur durch Gäste oder Einbrecher.
+**** G12: Unbefugtes Eindringen in Räumlichkeiten
+     - Schaden: gering
+     - Eintrittswahrscheinlichkeit: selten
+     - Resultierendes Risiko: gering
+     - Begründung: Gefahr nur durch Einbrecher. Interesse der Einbrecher sicher nicht das Monitoring-System.
+
+*** Sicherheitskonzeption
+    Um die größten Risiken zu beseitigen werden diese Maßnahmen implementiert:
+    #+ATTR_LATEX: :environment tabularx :align l|X :width \linewidth
+    | *Maßnahme* | *Beschreibung*                                      |
+    |------------+-----------------------------------------------------|
+    | M01\RowOdd | Verschlüsselte Datenübertragung                     |
+    | M02        | Verschlüsselte Speicherung der Daten                |
+    | M03\RowOdd | Signierte Datenübertragung                          |
+    | M04        | Benutzerauthentifizierung über OAuth                |
+    | M05\RowOdd | Replizierung wichtiger Dienste                      |
+    | M06        | Härtung und Konfiguration der einzelnen Komponenten |
+
+    Zu Maßnahme M04 ist anzumerken, dass die Authentifizierung über das Internet stattfindet,
+    sie muss deshalb entsprechend gesichert werden.
+
+    Dadurch ergibt sich die folgende Abdeckung der Risiken:
+
+    #+ATTR_LATEX: :environment tabularx :align l|CC :width \linewidth
+    | *Gefahr*   | *Risiko* | *Maßnahme* |
+    |------------+----------+------------|
+    | G01\RowOdd | gering   | -          |
+    | G02        | gering   | M01        |
+    | G03\RowOdd | *mittel* | M02        |
+    | G04        | gering   | -          |
+    | G05\RowOdd | gering   | M03        |
+    | G06        | gering   | M04        |
+    | G07\RowOdd | gering   | -          |
+    | G08        | gering   | M05        |
+    | G09\RowOdd | *mittel* | M06        |
+    | G10        | *hoch*   | M04        |
+    | G11\RowOdd | *mittel* | M01        |
+    | G12        | gering   | -          |

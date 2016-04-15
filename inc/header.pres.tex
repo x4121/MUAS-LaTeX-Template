@@ -46,17 +46,16 @@
 % toc for every section
 % title page for every section
 \AtBeginSection[]{
-    % Looks nice, but not very helpfull
-    % \begin{frame}
-    % \vfill
-    % \centering
-    % \begin{beamercolorbox}[sep=8pt,center,rounded=true]{title}
-    %   \usebeamerfont{title}\insertsectionhead\par%
-    % \end{beamercolorbox}
-    % \vfill
-    % \end{frame}
     \begin{frame}
-        \frametitle{\insertsectionhead}
-        \tableofcontents[currentsection]
+    \vfill
+    \centering
+    \begin{beamercolorbox}[sep=8pt,center,rounded=true]{title}
+      \usebeamerfont{title}\insertsectionhead\par%
+    \end{beamercolorbox}
+    \vfill
     \end{frame}
+    % \begin{frame}
+    %     \frametitle{\insertsectionhead}
+    %     \tableofcontents[currentsection]
+    % \end{frame}
 }

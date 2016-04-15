@@ -19,7 +19,7 @@
   - Leute, die org-mode beherrschen
     oder zumindest ein paar Stunden in das Lernen investieren würden
     (der Ordner [[beispiel-output]] enthält allerdings
-    auch das erzeugte LaTeX-Dokument)
+    auch das erzeugte LaTeX-Dokument und Beispiele)
   - Leute, die ein formal richtiges und optisch ansprechendes Layout wollen
     und dafür auch gerne Zeit investieren
 * Für wen nicht?
@@ -28,26 +28,45 @@
     (das hier ist noch nicht fertig und ihr müsst vermutlich die ein
     oder andere Änderung selber schreiben)
 * Was wird benötigt?
-  - *Org mode*
-        - [[http://orgmode.org/manual/]]
-        - Gibt's auch für vim ([[https://github.com/x4121/vim-orgmode]])
-  - *pdfpc-latex-notes*
-        - [[https://github.com/cebe/pdfpc-latex-notes]]
-        - Alternativ auf die \pnote{}-Blöcke verzichten
-          und keine generierten Notizen für pdfpc haben.
+** Emacs
+   Kein besonders guter Texteditor, aber *org-ref* scheint nur in Emacs
+   richtig zu funktionieren.
+** pdfpc-latex-notes
+   - [[https://github.com/cebe/pdfpc-latex-notes]]
+   - Alternativ auf die \pnote{}-Blöcke in Präsentationen verzichten
+     und keine generierten Notizen für pdfpc haben.
+     Ohnehin nur relevant, wenn man pdfpc verwendet.
+** IEEEtran
+   - [[http://www.ctan.org/tex-archive/macros/latex/contrib/IEEEtran/]]
+   - Nur, falls man Artikel im IEEE-Format schreiben möchte.
+* Was muss ich machen?
+  - Emacs installieren (die unintuitive Steuerung durch [[https://www.emacswiki.org/emacs/Evil][Evil]] ersetzen)
+  - [[emacs.init]] kopieren und als ~/.emacs speichern
+  - Zumindest teilweise in [[http://orgmode.org/][org-mode]] und [[https://github.com/jkitchin/org-ref][org-ref]] einlesen
+  - Dokumentation/Präsentation schreiben
+  - Dokumentation mit ~C-c C-e l p~ zu PDF kompilieren
+  - Präsentationen mit ~C-c C-e l P~ zu Beamer PDF kompilieren
 * Was geht aktuell schon?
 ** Beamer präsentation
    - Schreiben des Inhalts in org-mode
-   - PDF-Generierung mit nur einem Befehl aus emacs/vim
+   - PDF-Generierung mit nur einem Befehl aus emacs
    - Fußnoten mit inline-LaTeX
    - Abbildungen, Tabellen und Code ohne LaTeX
    - Generierung der Notizen für pdfpc mit inline-LaTeX
-* Was geht noch nicht?
 ** Ausarbeitung
-   - Template für eine Ausarbeitung kommt Ende Dezember oder Anfang Januar
+   - Schreiben des Inhalts in org-mode
+   - PDF-Generierung mit nur einem Befehl aus emacs
+   - Fußnoten/Referenzen mit org-mode oder org-ref
+   - Abbildungen, Tabellen und Code ohne LaTeX
+* Was geht noch nicht?
 ** Beamer präsentation
    - Fußnoten müssen in vielen Fällen in inline-LaTeX geschrieben werden,
      eventuell lässt sich das besser lösen.
    - Notizen für pdfpc lassen sich nicht in org-mode schreiben.
      Lässt sich vermutlich auch nicht so leicht beheben.
    - Seitenzahlen in appendix-Slides sind falsch
+* Beispiele
+  - [[beispiel-output/Hauptseminar/fpbrooks.pdf][Hauptseminar - Ausarbeitung]]
+  - [[beispiel-output/Hauptseminar/presentation.pdf][Hauptseminar - Präsentation]]
+  - [[beispiel-output/IEEE/ausarbeitung.pdf][IEEE conference paper]]
+  - [[beispiel-output/SichereSysteme][Praktikums-Ausarbeitung]]

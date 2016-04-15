@@ -1,0 +1,29 @@
+#+TITLE:    Sichere Systeme:\\ Sicheres Heimmonitoring\\ (SichHeimMonitor)
+#+AUTHOR:   Grodon, Placht, Russwurm\\ \small Hochschule für Angewandte Wissenschaften München\\ \small Fakultät für Informatik und Mathematik
+#+LANGUAGE: de
+#+OPTIONS:  H:3 toc:nil ^:{}
+
+#+LaTeX_CLASS: article
+#+LaTeX_CLASS_OPTIONS: [koma,12pt]
+#+LaTeX_HEADER: \input{header.inc.tex}
+ 
+#+LaTeX: \pagebreak
+#+TOC: headlines 2
+#+LaTeX: \newpage
+
+#+INCLUDE: "./glossar.org" :minlevel 1
+#+INCLUDE: "./specification.org" :minlevel 1
+#+LaTeX: \newpage
+* Überwachungsdienst
+#+INCLUDE: "./russwurm/README.org" :minlevel 2
+#+LaTeX: \newpage
+* Dashboard
+#+INCLUDE: "./placht/README.org" :minlevel 2
+#+LaTeX: \newpage
+* ELK
+#+INCLUDE: "./grodon/README.org" :minlevel 2
+
+#+LaTeX: \newpage
+
+bibliography:refs.bib
+bibliographystyle:ieeetr

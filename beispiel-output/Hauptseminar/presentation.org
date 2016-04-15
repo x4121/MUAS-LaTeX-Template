@@ -1,0 +1,857 @@
+#+TITLE:       Fred P. Brooks:\\ A Software Pioneer
+#+AUTHOR:      Armin Grodon
+#+EMAIL:       me@armingrodon.de
+#+DATE:        10.12.2015
+#+DESCRIPTION: Fred P. Brooks im Kontext der Veranstaltung 'Software Pioneers'
+#+KEYWORDS:    Brooks "Fred Brooks" OS/360 "Mythical Man Month"
+#+LANGUAGE:    de
+
+#+STARTUP: beamer
+#+STARTUP: oddeven
+#+LaTeX_CLASS: beamer
+#+LaTeX_CLASS_OPTIONS: [t,compress,11pt,xcolor=dvipsnames]
+#+OPTIONS: H:3 toc:nil
+#+COLUMNS: %20ITEM %13BEAMER_env(Env) %6BEAMER_envargs(Args) %4BEAMER_col(Col) %7BEAMER_extra(Extra)
+
+#+LaTeX_HEADER: \input{inc/header.pres.tex}
+#+LaTeX: \input{inc/toc.tex}
+
+
+* Fred Brooks
+** Leben
+*** 
+**** Lebenslauf
+     :PROPERTIES:
+     :BEAMER_col: 0.6
+     :END:
+     - Frederick Phillips Brooks, Jr.\footnotemark[1]
+     - 19. April 1931 in Durham, NC
+     - 1953, Bachelor in Physik
+     - 1956, Doktor in Informatik (Angewandte Mathematik)
+     #+LaTeX: \pnote{B.A. mit Auszeichnung}
+     #+LaTeX: \pnote{The Analytic Design of Automatic Data Processing Systems}
+     #+LaTeX: \pnote{Howard Aiken: Harvard Mark I}
+**** Foto
+     :PROPERTIES:
+     :BEAMER_col: 0.4
+     :END:
+     #+CAPTION: Fred Brooks in Berlin\footnotemark[2]
+     #+ATTR_LATEX: :width 0.8\textwidth
+     [[file:./img/Fred_Brooks.jpg]]
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[1]{\url{https://www.cs.unc.edu/~brooks/FPB_BIO.CV.04.2007.pdf}} %cv
+     #+LaTeX: \footnotetext[2]{\url{https://commons.wikimedia.org/wiki/File:Fred_Brooks.jpg}}
+** IBM
+*** Überblick
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - Architekt für die Supercomputer *Stretch* und *Harvest*\footnotemark[1]\\
+     - Projektleiter für Entwicklung von *System/360*
+     - Projektleiter für Design von *OS/360*
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[1]{\url{https://www.cs.unc.edu/~brooks/FPB_BIO.CV.04.2007.pdf}} %cv
+*** Stretch
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     *IBM 7030 Stretch* (1956-1961)
+     - Damals schnellster Supercomputer\footnotemark[3]
+     - Fast 190m^2 Fläche
+     - Für Los Alamos National Laboratory entwickelt
+     - Als Basis für mehrere Modelle geplant\footnotemark[4]
+     - Finanziellerer Misserfolg
+     - Grundlage der meisten heutigen Interrupt-Systeme\footnotemark[1]
+     #+LaTeX: \pnote{Tennisplatz}
+     #+LaTeX: \pnote{Ursprünglich für NSA geplant}
+     #+LaTeX: \pnote{Zu viel versprochen (aus Angst vor UNIVAC)}
+     #+LaTeX: \pnote{1.2 statt 4 MIPS}
+     #+LaTeX: \pnote{Preis von $13.5m auf $7.8m reduziert und vom Markt genommen}
+     #+LaTeX: \pnote{Viele revolutionäre Konzepte}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[3]{\url{http://www-03.ibm.com/ibm/history/exhibits/mainframe/mainframe_PP7030.html}} %stretch
+     #+LaTeX: \footnotetext[4]{Marshall W. McMurran, ACHIEVING ACCURACY: A Legacy of Computers and Missiles, 98-100} %aal
+     #+LaTeX: \footnotetext[1]{\url{https://www.cs.unc.edu/~brooks/FPB_BIO.CV.04.2007.pdf}} %cv
+*** Harvest
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     *IBM 7950 Harvest* (1958-1962)
+     - Doppelt so großer Zusatz zum *IBM Stretch*\footnotemark[4]
+     - Kryptoanalyse für die NSA
+     - Ursprung des 8-Bit-Byte\footnotemark[5]
+     #+LaTeX: \pnote{Byte von Brooks in OS/360 übernommen}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[4]{Marshall W. McMurran, ACHIEVING ACCURACY: A Legacy of Computers and Missiles, 98-100} %aal
+     #+LaTeX: \footnotetext[5]{\url{http://www.brouhaha.com/~eric/retrocomputing/ibm/stretch/early_history_of_harvest.html}} %harvest
+* OS/360
+** Hintergrund
+*** Ausgangspunkt
+**** Content
+     :PROPERTIES:
+     :BEAMER_col: 0.6
+     :END:
+     - IBM hat ~70% Marktanteil\footnotemark[6]
+     - Angst Marktanteile zu verlieren
+     - Computer können nicht genug Speicher adressieren\footnotemark[1]
+     - Computer sind nicht einfach durch neuer Hardware erweiterbar
+     - Kompliziertere Speichermedien erfordern "`bessere"' Betriebssysteme
+     #+LaTeX: \pnote{"Schneewittchen und die sieben Zwerge"}
+     #+LaTeX: \pnote{Mehrere Monopolklagen von "Zwergen" und US-Regierung}
+     #+LaTeX: \pnote{IBM 2311 Festplattenlaufwerk}
+**** Foto
+     :PROPERTIES:
+     :BEAMER_col: 0.4
+     :END:
+     #+CAPTION: IBM 2311 Festplattenlaufwerk\footnotemark[7]
+     #+ATTR_LATEX: :width 0.7\textwidth
+     [[file:./img/IBM_2311.jpg]]
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[6]{Paul E. Ceruzzi, A History of Modern Computing, 144}
+     #+LaTeX: \footnotetext[1]{\url{https://www.cs.unc.edu/~brooks/FPB_BIO.CV.04.2007.pdf}} %cv
+     #+LaTeX: \footnotetext[7]{\url{https://commons.wikimedia.org/wiki/File:IBM_2311_memory_unit.JPG}}
+*** Entscheidung
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     1961: Entscheidung für zweiten Versuch einer einheitlichen Basis\footnotemark[9]
+     - Vollständig auf- und abwärtskompatible Familie aus 7 Computern
+     - Gleiche Architektur für leistungsschwache Geräte und Supercomputer (geplant)
+     - Kompatibel für zukünftige Hardware und Software
+     #+LaTeX: \pnote{2. Versuch nach Stretch}
+     #+LaTeX: \pnote{"It couldn't be done"}
+     #+LaTeX: \pnote{MISD,SIMD}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[9]{G.H. Mealy, The functional structure of OS/360, Part I: Introductory survey, IBM Systems Journal}
+** Design
+*** Grundlegende Neuerungen
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - Festplattenlaufwerk in (fast) allen Ausführungen
+     - Multitasking unabhängiger Jobs\footnotemark[9]
+     - Kontrollprogramm ersetzt Operator
+     - Remote Zugriff
+     - Erweiterbar (Modular)
+     #+LaTeX: \pnote{schneller und größer -> Nachteil: größer}
+     #+LaTeX: \pnote{MT: Vorgänger nur sequentiell oder mehrere Daten, gleiches Programm}
+     #+LaTeX: \pnote{Supervisor statt bloß SPOOLing}
+     #+LaTeX: \pnote{OP: Starten, Stoppen, Priorisieren}
+     #+LaTeX: \pnote{remote: starten/abholen/editieren}
+     #+LaTeX: \pnote{Sysgen, erweiterbares Minimalsystem -> general purpose}
+     #+LaTeX: \pnote{Anpassbar an Art und Anzahl der Peripherie}
+     #+LaTeX: \pnote{Mehrere Programme für gleichen Zweck (schnell, minimal)}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[9]{G.H. Mealy, The functional structure of OS/360, Part I: Introductory survey, IBM Systems Journal}
+*** Designentscheidungen
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     Abstraktion und Vereinfachung:
+     - Abstraktion von Hardware und Software\footnotemark[9]
+     - Beschränkung auf zwei Systemzustände\\
+       (*Problem* und *Supervisor State*)
+     - Task: Jegliche Kombination aus Programm und Daten
+     - Alles ist ein *Data Set*\footnotemark[11]
+     - Behandlung von CPU als Ressource\footnotemark[10]
+     #+LaTeX: \pnote{Mealy: Vergleich mit Zwiebel}
+     #+LaTeX: \pnote{Macros für I/O}
+     #+LaTeX: \pnote{user/kernel mode, system macroinstruction -> system call}
+     #+LaTeX: \pnote{Gleiche Behandlung: MISD/SIMD}
+     #+LaTeX: \pnote{CPU: Allokierung wie Speicher}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[9]{G.H. Mealy, The functional structure of OS/360, Part I: Introductory survey, IBM Systems Journal}
+     #+LaTeX: \footnotetext[10]{B.I. Witt, The functional structure of OS/360, Part II: Job and task management, IBM Systems Journal}
+     #+LaTeX: \footnotetext[11]{W.A. Clark, The functional structure of OS/360, Part III: Data management}
+** Aufbau
+*** Überblick
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     "`One big peach and a bowl full of independent cherries"'\footnotemark[8]
+     - Kontrollprogramm\\ (*Supervisor*, *Job Scheduler* und *Master Scheduler*)\footnotemark[9]
+     - Compiler, Sortierprogramme, Macrogeneratoren, etc.
+     #+LaTeX: \pnote{Beeinflusst durch Task-Management in STRETCH, aber Erweitert/Generalisiert}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[8]{F.P. Brooks, Vortrag: The IBM Operating System/360, Berlin 2001}
+     #+LaTeX: \footnotetext[9]{G.H. Mealy, The functional structure of OS/360, Part I: Introductory survey, IBM Systems Journal}
+*** Supervisor\footnotemark[9]
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - Zentraler Kontrollpunkt
+     - Speicherverwaltung
+     - Lädt Programme/Module in Speicher
+     - Steuert Nebenläufigkeit von Tasks
+     - Exception Handling
+     - Bereitstellung von System-Diensten
+     #+LaTeX: \pnote{Aufseher, Leiter: Allen Programmen übergeordnet}
+     #+LaTeX: \pnote{Clock, Logging, Monitoring, Summary}
+     #+LaTeX: \pnote{Aufruf über Interrupts: Programm oder System}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[9]{G.H. Mealy, The functional structure of OS/360, Part I: Introductory survey, IBM Systems Journal}
+*** Scheduler\footnotemark[9]
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     *Job-Scheduler*
+     - Analysiert und optimiert eingehende Jobs
+     - Verwaltet Ein- und Ausgabegeräte (Nebenläufigkeit von Jobs)
+     - Initialisieren und Terminierung der einzelnen Job Steps
+     *Master-Scheduler*
+     - Schnittstelle zum Operator
+     #+LaTeX: \pnote{Sortierung der Jobs}
+     #+LaTeX: \pnote{Erzeugen von Tasks aus Job Steps, Rückgabe der Ausgabe}
+     #+LaTeX: \pnote{Master: Steuerung und Rückmeldung (Mount)}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[9]{G.H. Mealy, The functional structure of OS/360, Part I: Introductory survey, IBM Systems Journal}
+*** Begriffsdefinitionen: Jobs\footnotemark[9]\footnotemark[10]
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - *Job*: Unabhängige Arbeitseinheit\\
+       Kein Bezug zu anderen Jobs möglich
+     - *Job Step*: Sequentieller Arbeitsschritt eines Jobs\\
+       Bezug zwischen Job Steps möglich
+     - *Task*: Arbeit eines Programms in einem Job Step\\
+       Kann selbst weitere Tasks (Subtasks) erzeugen\\
+       Parallele Ausführung möglich
+     - *Control Statement*: Beschreibt Anforderungen eines Jobs
+     - *Job Stream*: Gruppierung mehrerer Control Statements\\
+       Kann Eingabedaten enthalten
+     #+LaTeX: \pnote{Job: Kann nicht auf Jobs oder Output von Jobs warten}
+     #+LaTeX: \pnote{Task: Parallel mit anderen Jobs, Hierarchisch (Subtask abbrechen)}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[9]{G.H. Mealy, The functional structure of OS/360, Part I: Introductory survey, IBM Systems Journal}
+     #+LaTeX: \footnotetext[10]{B.I. Witt, The functional structure of OS/360, Part II: Job and task management, IBM Systems Journal}
+*** Programmstrukturen und Wiederverwendbarkeit\footnotemark[10]
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - Programm besteht aus einzelnen Unterprogrammen (Load Modules)
+     - Mögliche Strukturen:
+            - *Simple*: Gesamtes Programm ohne weitere Unterprogramme
+            - *Planed Overlay*: Programm in mehreren Segmenten
+            - *Dynamic Serial*: Programm aus sequentiell angeordneten Unterprogrammen
+            - *Dynamic Parallel*: Programm startet Unterprogramme in weiteren Tasks
+     - Unterprogramme sind:
+            - *nicht wiederverwendbar*: Veränderung während Ausführung
+            - *seriell wiederverwendbar*: Umkehrbare Veränderungen 
+            - *wiederverwendbar*: Geschützt gegen Veränderungen
+     #+LaTeX: \pnote{SS: Nicht teilbar}
+     #+LaTeX: \pnote{POS: Vom Programmierer geteilt - Paging}
+     #+LaTeX: \pnote{DSS: Ein Programmfluss - LINK, XCTL, LOAD}
+     #+LaTeX: \pnote{ Erstes Modul durch Task-Creation geladen}
+     #+LaTeX: \pnote{ LINK - SVC - Alloc, Fetch, Branch - RETURN - free}
+     #+LaTeX: \pnote{DPS: ATTACH}
+     #+LaTeX: \pnote{reenterable}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[10]{B.I. Witt, The functional structure of OS/360, Part II: Job and task management, IBM Systems Journal}
+*** Job und Task Management\footnotemark[10]
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     *Job Management*
+     - Definiert und delegiert Arbeit
+     - Durchsucht Job Steps nach benötigten Datenträgern
+     - Sicherstellung, dass Ressourcen für Job Step bereitgestellt sind
+     *Task Management* 
+     - Steuert den Arbeitsablauf
+     - Verwaltet Task mit Kontext (Task Control Block) in priorisierter Schlange
+     - Nicht wartenden Task mit höchster Priorität laden
+     - Bietet Speicherschutz und Speicher-Pools
+     - Benutzt einfachen swapping-Mechanismus (roll-in/out)
+     #+LaTeX: \pnote{TM: fetch load module, alloc res, sync tasks}
+     #+LaTeX: \pnote{ TCB: register, allok adressen, etc}
+     #+LaTeX: \pnote{Prio: hw opt, user prio, op prio}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[10]{B.I. Witt, The functional structure of OS/360, Part II: Job and task management, IBM Systems Journal}
+*** Data Management\footnotemark[11]
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     Reaktion auf wachsende Zahl an Geräten notwendig:
+     - Geräteklassen statt Geräte
+     - Zuweisung zu Geräten während der Ausführung
+     - statische, dynamische und generierte Zugriffsroutinen
+     #+LaTeX: \pnote{Orientierung an bestehenden Systemen: IBSYS/IBJOB}
+     #+LaTeX: \pnote{statisch: programmer entscheidet, benötigt wissen, schnell}
+     #+LaTeX: \pnote{dynamisch: interpretiert, flexibel, langsam (load-time)}
+     #+LaTeX: \pnote{NEU: generiert: schnell, flexibel, einfach (laufzeit)}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[11]{W.A. Clark, The functional structure of OS/360, Part III: Data management}
+*** Begriffsdefinitionen: Daten\footnotemark[11]
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - *Data Set*: Jede Sammlung von Daten\\
+       Enthält *Data Set Label* (Name, Speicherbereich und weitere Parameter des Data Sets)\\
+       Adressierung über Seriennummer des Volumes und eigenen Namen
+     - *Volume*: Jeglicher Zusatzspeicher\\
+       Identifizierbar über *Volume Label* (Seriennummer und und weitere Informationen)
+     - *Data-Set Catalog*: Baumstruktur von Data Set Labels die immer im Speicher gehalten wird
+     - *Generation Group*: Möglichkeit ältere Versionen vorzuhalten
+     - *Protected*: Markierung um Passwort für Zugriff zu verlangen
+     - *Buffer*: Zwischenspeicher für Ein- und Ausgabe
+     #+LaTeX: \pnote{disk pack, data cell, drum, disk area}
+     #+LaTeX: \pnote{Simples VCS mit relativem Tagging}
+     #+LaTeX: \pnote{Passwort über Konsole. Passwörter mit Master Passwort}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[11]{W.A. Clark, The functional structure of OS/360, Part III: Data management}
+*** Datenzugriff\footnotemark[11]
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     Verschiedene Zugriffsmethoden mit jeweils eigenen Macrosprachen,
+     je nach Datenorganisation und Zugriffs-Art
+
+     #+CAPTION: Zugriffsmethoden nach Datenorganisation und Zugriffs-Art
+     #+NAME:   tab:access_methods
+     |                    | Queued | Basic |
+     |--------------------|--------|-------|
+     |/                   |<       |       |
+     |                    |  <c>   |  <c>  |
+     | Sequential         | QSAM   | BSAM  |
+     | Indexed Sequential | QISAM  | BISAM |
+     | Direct             |        | BDAM  |
+     | Partitioned        |        | BPAM  |
+     | Telecommunication  | QTAM   | BTAM  |
+
+     #+LaTeX: \pnote{Organisation abhängig von Datenträger}
+     #+LaTeX: \pnote{Tape, Paper, Card nur sequential}
+     #+LaTeX: \pnote{Direct access: IS, D, P}
+     #+LaTeX: \pnote{Telec: Message Queues (in Direct/Main)}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[11]{W.A. Clark, The functional structure of OS/360, Part III: Data management}
+** Nach OS/360
+*** Auswirkung für IBM
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - Finanzieller Erfolg (Obwohl langsam und schwer zu bedienen)\footnotemark[6]
+     - IBM bleibt weiterhin Marktführer
+     - Konkurrenz von 7 auf 5 geschrumpft
+     - Architekturstandard geschaffen
+     #+LaTeX: \pnote{Nicht alle Ziele eingehalten}
+     #+LaTeX: \pnote{- DiskOS ohne Multitasking}
+     #+LaTeX: \pnote{- BasicOS & TapeOS}
+     #+LaTeX: \pnote{- TSS gecanceled}
+     #+LaTeX: \pnote{BUNCH}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[6]{Paul E. Ceruzzi, A History of Modern Computing, 144}
+*** Auswirkung für weitere Betriebssysteme
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - 32 bit Wortlänge als Standard\footnotemark[12]
+     - 32/64 bit float Wort
+     - Strings variabler Länge
+     - (nahezu) ausschließlich Universalregister
+     - 32 bit Adressen
+     - 8-Bit-Byte als Standard
+     - Ein OS für verschiedene Anwendungsfälle und Hardware
+     - Hardwarestandards
+     #+LaTeX: \pnote{statt 6 Bit}
+     #+LaTeX: \pnote{2*4 Bit Zahlen}
+     #+LaTeX: \pnote{Besonders im I/O-Bereich}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[12]{Paul E. Ceruzzi, A History of Modern Computing (mitp, 2003), 151f}
+*** Multics und Unix
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     1965-1969: Entwicklung von *Multics*\footnotemark[13]
+     - Projekt von MIT, General Electric und Bell Labs
+     - TSS mit vielen Ideen aus OS/360
+     - Virtual Memory und Security
+     1969-1971: Entwicklung von *Unix*\footnotemark[14]
+     - Bell Labs steigt aus Multics aus
+     - Ken Thompson und Dennis Ritchie starten Entwicklung von Unix
+     - 1971: Beginn der Reimplementierung in C
+     #+LaTeX: \pnote{Multiplexed Information and Computing System}
+     #+LaTeX: \pnote{Gute Ideen aber Flop, GE und Bell steigen aus}
+     #+LaTeX: \pnote{GE verkauft Computer-Abteilung an Honeywell}
+     #+LaTeX: \pnote{Supervisor managed HW, Tree-FS}
+     #+LaTeX: \pnote{In PL/1 geschrieben statt Assembler}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[13]{\url{http://www.multicians.org/history.html}}
+     #+LaTeX: \footnotetext[14]{\url{https://www.bell-labs.com/usr/dmr/www/hist.html}}
+** IBM heute
+*** Marktposition
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - über 90% Marktanteil bei Mainframes\footnotemark[15]
+     - *System z* immer noch kompatibel mit *OS/360* Software\footnotemark[16]
+     - PC-Sparte mit *Thinkpad* an Lenovo verkauft\footnotemark[17]
+     #+LaTeX: \pnote{MVT -> MVS -> OS/390 -> z/OS}
+     #+LaTeX: \pnote{zero downtime OS}
+     #+LaTeX: \pnote{Immer noch Markt für Mainframes: Mobile Transactions, Banken, etc.}
+     #+LaTeX: \pnote{Erfolgreicher IBM PC 5150 (Intel 8088) - aber zu starke Konkurrenz}
+     #+LaTeX: \pnote{Thinkpad: 2005}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[15]{\url{http://www.ccianet.org/2008/07/ibm-with-another-mainframe-antitrust-complaint-in-europe}}
+     #+LaTeX: \footnotetext[16]{\url{http://www-01.ibm.com/support/knowledgecenter/zosbasics/com.ibm.zos.zmainframe/zconc_compatible.htm}}
+     #+LaTeX: \footnotetext[17]{\url{http://www.cnet.com/news/ibm-sells-pc-group-to-lenovo}}
+*** System z
+**** Foto
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+CAPTION: System z Mainframes\footnotemark[18]
+     #+ATTR_LATEX: :width 0.7\textwidth
+     [[file:./img/System_z_Frames.jpg]]
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[18]{\url{https://commons.wikimedia.org/wiki/File:System_z_Frames.JPG}}
+*** System z
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     *IBM z13*
+     - Bis zu 10TB RAM und 141*5GHz\footnotemark[19]
+     - Bis zu 2.5 Milliarden Transaktionen am Tag\footnotemark[20]
+     - Bis zu 8,000 VMs
+     - Echtzeit Verschlüsselung
+     - Embedded echtzeit Analyse
+     #+LaTeX: \pnote{Januar 2015}
+     #+LaTeX: \pnote{100 Cyber Mondays, jeden Tag}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[19]{\url{http://www-03.ibm.com/systems/z/hardware/z13_specs.html}} %z13 specs
+     #+LaTeX: \footnotetext[20]{\url{http://www-03.ibm.com/press/us/en/pressrelease/45808.wss}} %z13 press
+*** Virtualisiertes MVS
+**** Foto
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+CAPTION: MVS/370 in Hercules in Ubuntu 15.10
+     #+ATTR_LATEX: :width 0.8\textwidth
+     [[file:./img/mvs_370.png]]
+     #+LaTeX: \pnote{Viele Hundert Seiten Dokumentation}
+     #+LaTeX: \pnote{OS/360 u. OS/370 public domain, Hercules open source}
+* The Mythical Man-Month
+** Vorgeschichte
+*** 
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - Brooks wechselt 1964 University of North Carolina at Chapel Hill\footnotemark[1]
+     - Gründet dort Lehrstuhl für Informatik (20 Jahre Leitung)
+     - "`Analyse der Erfahrungen aus OS/360"'\footnotemark[21] als Essays
+     - 1975: Veröffentlichung als Zusammenfassung
+     - Auch nach 40 Jahren noch zu großen Teilen gültig
+     - Allgemein sehr positiv aufgenommen
+     #+LaTeX: \pnote{Geplant, aber vor Fertigstellung von OS/360}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[1]{\url{https://www.cs.unc.edu/~brooks/FPB_BIO.CV.04.2007.pdf}} %cv
+     #+LaTeX: \footnotetext[21]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Vorwort}
+** Inhalt
+*** Überblick
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - Administrative und technische Lehren\footnotemark[21]
+     - Warum Programmieren so schwer? (Wie) lässt sich das lösen?
+     - Vielerlei, teils harte Kritik an OS/360
+     - Vielfach zitierte Weisheiten
+     #+LaTeX: \pnote{Kritik: Falsche Programmiersprache, Zu große Teams, zu viel Funktionalität, Zeit-/Funktionsdruck nachgegeben}
+     #+LaTeX: \pnote{Brooks'sche Gesetz: "Adding manpower to a late software project makes it later"}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[21]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Vorwort}
+*** Warum macht Programmieren (keinen) Spaß\footnotemark[22]
+**** Content
+     :PROPERTIES:
+     :BEAMER_col: 0.4
+     :END:
+     - Schöpfungsgedanke
+     - Wertschätzung durch Nutzung
+     - Gestaltung komplexer Objekte
+     - Freude am Lernen
+     - Schaffen aus dem Nichts
+     - Erzeugnis ist "`wirklich"'
+**** Content
+     :PROPERTIES:
+     :BEAMER_col: 0.6
+     :END:
+     - Zwang zur Fehlerfreiheit
+     - Ziel/Ressourcen nicht unter eigener Kontrolle
+     - Abhängigkeit von externen Programmen
+     - Suche nach Fehlern
+     - Projekte werden schnell obsolet
+     - Messung an neuen Konzepte/Ideen
+     - Unrealistische Konzepte
+     #+LaTeX: \pnote{Menschen machen Fehler}
+     #+LaTeX: \pnote{schlechten externen Programmen}
+     #+LaTeX: \pnote{Fertiges Produkt meistens hinter toller Idee}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[22]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 1 - Der Teersumpf}
+*** Warum scheitern Software-Projekte
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - Programmiersystem kostet etwa 9 mal so viel wie ein Programm\footnotemark[22]
+     - Zeitnot und fehlerhafte Zeitplanung\footnotemark[23]\footnotemark[29]
+           - Falscher Optimismus
+           - Gleichsetzung: Arbeitszeit - Arbeitskräfte
+           - Zu wenig Zeit für Tests (bedingt durch Optimismus)
+           - Falsche und zu späte Reaktion auf Verzögerung\footnotemark[35]\\
+             "`Der Einsatz zusätzlicher Arbeitskräfte bei bereits verzögerten Software-Projekten verzögert sie noch mehr"'\footnotemark[23]
+     #+LaTeX: \pnote{Marktfähig: Test, Doku, Wartung x3}
+     #+LaTeX: \pnote{Komponenten: Schnittstellen, Integration x3}
+     #+LaTeX: \pnote{Vergleich mit 2-Mann-Garagen-Startup}
+     #+LaTeX: \pnote{}
+     #+LaTeX: \pnote{Betriebskrankheit: Wird schon funktionieren}
+     #+LaTeX: \pnote{Zeit korreliert nicht mit Arbeitskräften. Exponentiell mehr Kommunikation}
+     #+LaTeX: \pnote{Schleichende Verzögerung. "Das wird man schon noch hinkriegen"}
+     #+LaTeX: \pnote{Brooks'sche Gesetz}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[22]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 1 - Der Teersumpf}
+     #+LaTeX: \footnotetext[23]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 2 - Der Mythos Mann-Monat}
+     #+LaTeX: \footnotetext[29]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 8 - Die Praxis als Herausforderung}
+     #+LaTeX: \footnotetext[35]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 14 - Die Katastrophe wird ausgebrütet}
+*** Warum scheitern Software-Projekte
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - Zu große Entwicklerteams\footnotemark[24]
+     - Fehlen eines geschlossenen Konzepts/Designs, besonders bei wechselnder Leitung\footnotemark[25]
+     - Fehlen eines Pilotprojekts\footnotemark[32]
+     - "`Das Problem des zweiten Systems"'\footnotemark[26]
+     #+LaTeX: \pnote{Wenig aber gute Programmierer - rest entlassen oder gehilfen}
+     #+LaTeX: \pnote{Vergleich mit Ärzteteam - Ein Chefarzt + Spezialisten + Gehilfen}
+     #+LaTeX: \pnote{Pilotprojekt für den Abfalleimer. Auch einplanen!}
+     #+LaTeX: \pnote{Erste Version zu minimal, zweite zu überladen.  Iteratives einpendeln}
+     #+LaTeX: \pnote{OS/360 war sein zweites System}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[24]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 3 - Das Ärzteteam}
+     #+LaTeX: \footnotetext[25]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 4 - Aristokratie, Demokratie und Systementwicklung}
+     #+LaTeX: \footnotetext[32]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 11 - Das Pilotprojekt für den Abfalleimer}
+     #+LaTeX: \footnotetext[26]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 5 - Das zweite System}
+*** Warum scheiterten Software-Projekte
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - Probleme der Informationsweitergabe an alle Mitarbeiter\footnotemark[27]\footnotemark[28]
+     - Kein bestehendes Tooling für Management\footnotemark[29]\footnotemark[31]
+     - Probleme wegen Programmgröße\footnotemark[30]
+     - Keine Hochsprachen, schlechtes Tooling\footnotemark[33]\footnotemark[34]
+     - Keine Dokumentation im Quellcode\footnotemark[36]
+     #+LaTeX: \pnote{Alle Änderungen für alle Mitarbeiter gedruckt, später Mikrofilm (150S/d * ~1000 Mitarbeiter)}
+     #+LaTeX: \pnote{Overlays, mehrere Programme in unterschiedlichen Größen}
+     #+LaTeX: \pnote{Nur selbst geschriebene Hilfstools, Vergleich mit Handwerkern}
+     #+LaTeX: \pnote{Keine IDEs, langes Compilen, schlechtes Debuggen}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[27]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 6 - Die Wortstafette}
+     #+LaTeX: \footnotetext[28]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 7 - Wieso fiel der Turm zu Babel?}
+     #+LaTeX: \footnotetext[29]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 8 - Die Praxis als Herausforderung}
+     #+LaTeX: \footnotetext[31]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 10 - Die Dokumenten-Hypothese}
+     #+LaTeX: \footnotetext[30]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 9 - Zwei Zentner in einem Ein-Zentner-Sack}
+     #+LaTeX: \footnotetext[33]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 12 - Gutes Werkzeug}
+     #+LaTeX: \footnotetext[34]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 13 - Das Ganze und seine Teile}
+     #+LaTeX: \footnotetext[36]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 15 - Das andere Gesicht}
+*** No Silver Bullet\footnotemark[37]
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     1986 auf Konferenz veröffentlicht und später in Neuauflage abgedruckt
+     - Warum wächst die Hardware-Entwicklung so schnell und die Software-Entwicklung so langsam?
+     - Warum ist Software-Entwicklung so viel komplexer?
+     - Kann man Software-Entwicklung beschleunigen und wenn ja, wie?
+     - Voraussage, dass keine einzelne Änderung in 10 Jahren eine
+       Verbesserung um den Faktor 10 bringen wird
+     - Sehr kontrovers diskutiert, Vorwurf des Pessimismus\footnotemark[38]
+     #+LaTeX: \pnote{International Federation of Information Processing}
+     #+LaTeX: \pnote{20. Jahre MMM, deutsche Erstauflage}
+     #+LaTeX: \pnote{Vielschichtig, keine gleichen Teile, gezwungene Konformität}
+     #+LaTeX: \pnote{Produktivität, Zuverlässigkeit, Einfachheit}
+     #+LaTeX: \pnote{Nachschuss: Revision nach 9 Jahren}
+     #+LaTeX: \pnote{"I told you so" Effekt. Richtigstellung Akzidentz/Essenz}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[37]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 16 - Silberkugeln sind leider aus}
+     #+LaTeX: \footnotetext[38]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 16 - Keine Silberkugeln Nachschuss}
+*** No Silver Bullet - vorgeschlagene Lösungsmöglichkeiten\footnotemark[37]
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - Kaufen statt Programmieren
+     - Rapid Prototyping
+     - Iterative Entwicklungsverfahren
+     - Ausbilden "`herausragender Designer"'
+     #+LaTeX: \pnote{Computer günstiger -> mehr general purpose SW -> SW wird günstiger. Bsp: Accounting}
+     #+LaTeX: \pnote{Branchensoftware (Nachschub)}
+     #+LaTeX: \pnote{Wie in 11 - Pilot - Meinung einholen - Testen}
+     #+LaTeX: \pnote{MVP und Top-Down - Emotionaler Ansporn - Frühe Rückmeldung}
+     #+LaTeX: \pnote{Kritik am Wasserfallmodell - Trugschluss}
+     #+LaTeX: \pnote{Designer: Gleicher Status mit Managern}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[37]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 16 - Silberkugeln sind leider aus}
+*** No Silver Bullet - keine Lösungsmöglichkeiten\footnotemark[37]
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     Keine Lösung:
+     - Hochsprachen
+     - Multitasking
+     Unwahrscheinliche Lösungen:
+     - Programmierkonzepte von Ada
+     - Objektorientierte Programmierung
+     - Künstliche Intelligenz
+     #+LaTeX: \pnote{Akzidenz/Essenz: Zeitbedarf = Sum Häufigkeit * Zeit}
+     #+LaTeX: \pnote{Hochsprachen sind Komplexer, bei Steigerung wieder schlechter: zu esoterisch}
+     #+LaTeX: \pnote{Modularisierung, ADT, Hierarchie}
+     #+LaTeX: \pnote{Simula}
+     #+LaTeX: \pnote{Nachschuss: Rückrudern und Begründung, warum OOP nicht so erfolgreich ist}
+     #+LaTeX: \pnote{- Zu kleine Bausteine. Design statt Werkzeug. Teure Investition}
+     #+LaTeX: \pnote{Expertensysteme}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[37]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 16 - Silberkugeln sind leider aus}
+*** Rückblick nach 20 Jahren\footnotemark[39]
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - Erklärungsversuch, warum das Buch immer noch gelesen wird
+            - Zentrale Themen sind immer noch relevant
+            - Buchthema ist zum Teil "`Menschen in Teamarbeit"'
+     - Grafischer Desktop als Beispiel für evolutionäres, geschlossenes Design
+     - Voraussage des Untergangs von WIMP (Windows, Icons, Menus, Pointer)
+     - Bestätigung seiner Thesen durch /Boehm/, /DeMarco/ und /E.F. Schuhmacher/
+     - Selbstreflexion:
+            - Kapselung ist besser als gläserner Entwickler
+            - Überraschung durch PC-Revolution
+**** Marks
+     #+LaTeX: \pnote{Art der Entwicklung in SWE hat sich nicht komplett geändert}
+     #+LaTeX: \pnote{Detailierte Erklärung seiner Standpunkte, besonders: geschlossenes Konzept}
+     #+LaTeX: \pnote{Ein Architekt, egal wie klein das Team ist}
+     #+LaTeX: \pnote{Adaption: Schreibtisch, Papier}
+     #+LaTeX: \pnote{Erweiterung: Aufhebung der Beschränkungen (Papier)}
+     #+LaTeX: \pnote{-> Intuitive Bedienung ohne Anleitung}
+     #+LaTeX: \pnote{Abwägung: Power - Freundlichkeit}
+     #+LaTeX: \pnote{Ära der Sprachsteuerung mit natürlicher Sprache}
+     #+LaTeX: \pnote{Boehm - SWEng-Economics & COCOMO-Modell}
+     #+LaTeX: \pnote{- Kostenkurve steigt mit steigender Entwicklungszeit}
+     #+LaTeX: \pnote{- Kostenkurve steigt steil mit sinkender Entwicklungszeit}
+     #+LaTeX: \pnote{DeMarco - Peopleware: Productive Projects and Teams}
+     #+LaTeX: \pnote{Schuhmacher - "Small is Beautifull" - Machtabgabe an Teams}
+     #+LaTeX: \pnote{Parnas - Kapselung: robuster}
+     #+LaTeX: \pnote{Selbstbeschleunigender Prozess - Fast alle Akzidenz beseitigt - Massenware}
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[39]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 19 - Vom Mythos des Mann-Monats nach 20 Jahren}
+* Fazit
+** 
+*** Fazit
+**** Content
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     - Prägte den Begriff "`Software-Architekt"'\footnotemark[1]
+     - Schaffung des Mainframes
+     - Schaffung der Grundlage für heutige Computer
+     - Zahlreiche Ehrungen und Auszeichnungen für seine Leistungen
+     - Arbeitet immer noch in der Forschung zu Software-Architektur\footnotemark[40]
+     #+LaTeX: \pnote{Halbes Jahrhundert!}
+     #+LaTeX: \pnote{National Medal of Technology: S-OS/360}
+     #+LaTeX: \pnote{ACM Turing Award, IEEE John von Neumann Meal, Ehrendoktor ETH Zürich}
+**** Marks
+     :PROPERTIES:
+     :BEAMER_env: ignoreheading
+     :END:
+     #+LaTeX: \footnotetext[1]{\url{https://www.cs.unc.edu/~brooks/FPB_BIO.CV.04.2007.pdf}} %cv
+     #+LaTeX: \footnotetext[40]{F.P. Brooks, Erfolgreiches Design (mitp, 2011), Vorwort}
+*** Quellen
+    :PROPERTIES:
+    :BEAMER_env: appendix 
+    :END:
+    Quellen:
+    #+LaTeX: \tiny\begin{itemize}
+    #+LaTeX: \item F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003)
+    #+LaTeX: \item F.P. Brooks, Erfolgreiches Design (mitp, 2011)
+    #+LaTeX: \item F.P. Brooks, Vortrag: The IBM Operating System/360, Berlin 2001
+    #+LaTeX: \item Brooks & Mealy & Witt & Clark, The functional structure of OS/360, IBM Systems Journal
+    #+LaTeX: \item \url{https://www.cs.unc.edu/~brooks/FPB_BIO.CV.04.2007.pdf} %cv
+
+    #+LaTeX: \item \url{http://www-03.ibm.com/ibm/history/exhibits/mainframe/mainframe_PP7030.html} %stretch
+    #+LaTeX: \item \url{http://www-03.ibm.com/systems/z/hardware/z13_specs.html} %z13 specs
+    #+LaTeX: \item \url{http://www-03.ibm.com/press/us/en/pressrelease/45808.wss} %z13 press
+    #+LaTeX: \item \url{http://www-01.ibm.com/support/knowledgecenter/zosbasics/com.ibm.zos.zmainframe/zconc_compatible.htm}
+    #+LaTeX: \item \url{http://www.brouhaha.com/~eric/retrocomputing/ibm/stretch/early_history_of_harvest.html} %harvest
+    #+LaTeX: \item \url{http://www.ccianet.org/2008/07/ibm-with-another-mainframe-antitrust-complaint-in-europe}
+    #+LaTeX: \item \url{http://www.cnet.com/news/ibm-sells-pc-group-to-lenovo}
+    #+LaTeX: \item M.W. McMurran, ACHIEVING ACCURACY: A Legacy of Computers and Missiles, 98-100 %aal
+    #+LaTeX: \item P.E. Ceruzzi, A History of Modern Computing, 144, 151f
+    #+LaTeX: \item \url{http://www.multicians.org/history.html}
+    #+LaTeX: \item \url{https://www.bell-labs.com/usr/dmr/www/hist.html}
+    
+    #+LaTeX: \end{itemize}
+    #+LaTeX: \small\centering Vielen Dank für die Aufmerksamkeit
+
+* Footnotes
+     #+LaTeX: \footnotetext[1]{\url{https://www.cs.unc.edu/~brooks/FPB_BIO.CV.04.2007.pdf}} %cv
+     #+LaTeX: \footnotetext[2]{\url{https://commons.wikimedia.org/wiki/File:Fred_Brooks.jpg}}
+     #+LaTeX: \footnotetext[3]{\url{http://www-03.ibm.com/ibm/history/exhibits/mainframe/mainframe_PP7030.html}} %stretch
+     #+LaTeX: \footnotetext[4]{M.W. McMurran, ACHIEVING ACCURACY: A Legacy of Computers and Missiles, 98-100} %aal
+     #+LaTeX: \footnotetext[5]{\url{http://www.brouhaha.com/~eric/retrocomputing/ibm/stretch/early_history_of_harvest.html}} %harvest
+     #+LaTeX: \footnotetext[6]{P.E. Ceruzzi, A History of Modern Computing, 144}
+     #+LaTeX: \footnotetext[7]{\url{https://commons.wikimedia.org/wiki/File:IBM_2311_memory_unit.JPG}}
+
+     #+LaTeX: \footnotetext[8]{F.P. Brooks, Vortrag: The IBM Operating System/360, Berlin 2001}
+     #+LaTeX: \footnotetext[9]{G.H. Mealy, The functional structure of OS/360, Part I: Introductory survey, IBM Systems Journal}
+     #+LaTeX: \footnotetext[10]{B.I. Witt, The functional structure of OS/360, Part II: Job and task management, IBM Systems Journal}
+     #+LaTeX: \footnotetext[11]{W.A. Clark, The functional structure of OS/360, Part III: Data management}
+
+     #+LaTeX: \footnotetext[12]{P.E. Ceruzzi, A History of Modern Computing (mitp, 2003), 151f}
+     #+LaTeX: \footnotetext[13]{\url{http://www.multicians.org/history.html}}
+     #+LaTeX: \footnotetext[14]{\url{https://www.bell-labs.com/usr/dmr/www/hist.html}}
+
+     #+LaTeX: \footnotetext[15]{\url{http://www.ccianet.org/2008/07/ibm-with-another-mainframe-antitrust-complaint-in-europe}}
+     #+LaTeX: \footnotetext[16]{\url{http://www-01.ibm.com/support/knowledgecenter/zosbasics/com.ibm.zos.zmainframe/zconc_compatible.htm}}
+     #+LaTeX: \footnotetext[17]{\url{http://www.cnet.com/news/ibm-sells-pc-group-to-lenovo}}
+     #+LaTeX: \footnotetext[18]{\url{https://commons.wikimedia.org/wiki/File:System_z_Frames.JPG}}
+     #+LaTeX: \footnotetext[19]{\url{http://www-03.ibm.com/systems/z/hardware/z13_specs.html}} %z13 specs
+     #+LaTeX: \footnotetext[20]{\url{http://www-03.ibm.com/press/us/en/pressrelease/45808.wss}} %z13 press
+     
+     #+LaTeX: \footnotetext[21]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Vorwort}
+     #+LaTeX: \footnotetext[22]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 1 - Der Teersumpf}
+     #+LaTeX: \footnotetext[23]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 2 - Der Mythos Mann-Monat}
+     #+LaTeX: \footnotetext[24]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 3 - Das Ärzteteam}
+     #+LaTeX: \footnotetext[25]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 4 - Aristokratie, Demokratie und Systementwicklung}
+     #+LaTeX: \footnotetext[26]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 5 - Das zweite System}
+     #+LaTeX: \footnotetext[27]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 6 - Die Wortstafette}
+     #+LaTeX: \footnotetext[28]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 7 - Wieso fiel der Turm zu Babel?}
+     #+LaTeX: \footnotetext[29]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 8 - Die Praxis als Herausforderung}
+     #+LaTeX: \footnotetext[30]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 9 - Zwei Zentner in einem Ein-Zentner-Sack}
+     #+LaTeX: \footnotetext[31]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 10 - Die Dokumenten-Hypothese}
+     #+LaTeX: \footnotetext[32]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 11 - Das Pilotprojekt für den Abfalleimer}
+     #+LaTeX: \footnotetext[33]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 12 - Gutes Werkzeug}
+     #+LaTeX: \footnotetext[34]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 13 - Das Ganze und seine Teile}
+     #+LaTeX: \footnotetext[35]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 14 - Die Katastrophe wird ausgebrütet}
+     #+LaTeX: \footnotetext[36]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 15 - Das andere Gesicht}
+     #+LaTeX: \footnotetext[37]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 16 - Silberkugeln sind leider aus}
+     #+LaTeX: \footnotetext[38]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 16 - Keine Silberkugeln Nachschuss}
+     #+LaTeX: \footnotetext[39]{F.P. Brooks, Vom Mythos des Mann-Monats (mitp, 2003), Kapitel 19 - Vom Mythos des Mann-Monats nach 20 Jahren}
+     #+LaTeX: \footnotetext[40]{F.P. Brooks, Erfolgreiches Design (mitp, 2011), Vorwort}

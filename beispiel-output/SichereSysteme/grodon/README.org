@@ -1,0 +1,1199 @@
+* Einleitung
+  Logdaten fallen auf vielen Geräten an.
+  Oft werden diese lokal und dadurch dezentral gespeichert.
+  Das macht das Auswerten dieser Daten umständlich.
+  Durch die Trennung der Informationen verschiedener Quellen verringert sich auch
+  deren Informationsgehalt im Gesamten.
+  Viele Ereignisse lassen sich beispielsweise erst aus der Zusammenführung
+  verschiedener Informationsquellen erkennen.
+
+  Fast jedes Programm verwendet unterschiedliche Log-Formate
+  und die meisten davon wurden nicht mit Fokus auf Menschenlesbarkeit entwickelt.
+
+  Um die Informationen des gesamten "`Sicheren Heimnetzwerk"' verfügbar zu machen,
+  sollen die anfallenden Logdaten deshalb zentral gespeichert,
+  menschenlesbar aufbereitet und visualisiert werden,
+  wie es als Anwendungsfall "`UC1"' ([[nameref:sec_spec_func]]) festgelegt wurde.
+
+  Dafür wird in diesem Abschnitt der Programm-Stack ELK
+  (kurz für Elasticsearch, Logstash und Kibana)
+  evaluiert.
+
+* Architektur
+  Aus den einzelnen Komponenten für ELK und einem Wartungszugang über SSH
+  ergibt sich folgender, erster Architekturentwurf.
+
+  #+NAME: fig:Architekturentwurf
+  #+CAPTION: Erster Architekturentwurf
+  #+ATTR_LATEX: :placement [H]
+  [[./grodon/img/pre-arch.png]]
+
+  #+NAME: tab:leg_pre_arch
+  #+ATTR_LATEX: :placement [H]
+  | *orange* | Schnittstelle/Netzwerkport |
+  | *gelb*   | Prozess/Datei              |
+
+** Sicherheitskritische Punkte der Architektur
+   ELK wird zwar von vielen Firmen zur Analyse im Sicherheitsumfeld genutzt,
+   wurde aber nicht für diesen Bereich konzipiert.
+   Da das Hauptaugenmerk bei Elasticsearch und den dafür entwickelten
+   Anwendungen maximale Geschwindigkeit war und ist,
+   ist die Software im Grundzustand sehr unsicher.
+
+   Folgende sicherheitskritische Punkte wurden dadurch im ersten
+   Architekturentwurf festgestellt:
+
+   #+NAME: tab:sec_problems
+   #+CAPTION: Festgestellte Probleme
+   #+ATTR_LATEX: :placement [H] :environment tabularx :align l|X :width \linewidth
+   | *Problem*  | *Beschreibung*                                               |
+   |------------+--------------------------------------------------------------|
+   | P01\RowOdd | Keine verschlüsselte/signierte Übertragung innerhalb ELK     |
+   | P02        | Keine verschlüsselte/signierte Übertragung zwischen Logstash |
+   | P03\RowOdd | Keine Authentifizierung in Kibana                            |
+   | P04        | Elasticsearch und Logstash speichern unverschlüsselt         |
+
+   Elastic bietet mit Shield zwar eine Sicherheitslösung an,
+   bietet diese aber nur in einer 30-tägigen Testversion
+   und einem monatlichen "`Subscription"'-Modell an[[cite:elastic_shield]].
+   Da ein großer Teil der Funktionalität von Shield nicht benötigt wird
+   und die monatlichen Kosten von ca $90 für ein privates Projekt sehr hoch wären,
+   muss nach einer anderen Lösung gesucht werden.
+
+** Lösung der Punkte label:sec_loesung
+   Zur Lösung der nun gesammelten Punkte werden die Maßnahmen,
+   welche zu Beginn des Projekts in der Sicherheitskonzeption ermittelt wurden,
+   herangezogen.
+
+   #+NAME: tab:sec_action
+   #+CAPTION: Zuvor erarbeitete Maßnahmen
+   #+ATTR_LATEX: :placement [H] :environment tabularx :align l|X :width \linewidth
+   | *Maßnahme*   | *Beschreibung*                                      |
+   |--------------+-----------------------------------------------------|
+   | M01\RowOdd   | Verschlüsselte Datenübertragung                     |
+   | M02          | Verschlüsselte Speicherung der Daten                |
+   | M03\RowOdd   | Signierte Datenübertragung                          |
+   | M04          | Benutzerauthentifizierung über OAuth                |
+   | (M05)\RowOdd | (Replizierung wichtiger Dienste)                    |
+   | M06          | Härtung und Konfiguration der einzelnen Komponenten |
+
+   Da bereits bei der Entwicklung des Dashboards gezeigt wurde,
+   wie OAuth zu Implementieren ist und sich herausstellte,
+   dass möglicherweise nach einer optimaleren Authentifizierungsmethode
+   gesucht werden muss,
+   wird an dieser Stelle auf die erneute Implementierung von OAuth verzichtet und
+   stattdessen als vorübergehende Lösung "`basic authentication"' verwendet.
+
+   Da in der Sicherheitskonzeption ermittelt wurde,
+   dass die Verfügbarkeit der Visualisierung zweitrangig ist,
+   wird in einer ersten Entwicklungsstufe auf Replizierung und
+   Ausfallsicherheit verzichtet.
+   Alle Komponenten von ELK wurden allerdings so gebaut,
+   dass sie sich gut Replizieren und Verteilen lassen,
+   deshalb soll dies zu einem späteren Zeitpunkt nachgeholt werden.
+
+
+   Zu den Problemen wurden folgende Lösungen ermittelt:
+
+   #+NAME: tab:sec_solution
+   #+CAPTION: Lösungen für die festgestellten Probleme
+   #+ATTR_LATEX: :placement [H] :environment tabularx :align l|Xl :width \linewidth
+   | *Lösung*   | *Beschreibung*                                            | *Löst* |
+   |------------+-----------------------------------------------------------+--------|
+   | L01\RowOdd | ELK in Docker, Kommunikation auf Docker begrenzen         | P01    |
+   | L02        | Datenübertragung zwischen Logstash über stunnel           | P02    |
+   | L03\RowOdd | nginx mit SSL als Reverse Proxy vor Kibana                | P03    |
+   | L04        | Persistierung von Elasticsearch und Logstash mit eCryptfs | P04    |
+   Daraus ergibt sich folgende neue Architektur:
+
+   #+NAME: fig:Architektur
+   #+CAPTION: Architektur
+   #+ATTR_LATEX: :placement [H]
+   [[./grodon/img/arch.png]]
+
+   #+NAME: tab:leg_arch
+   #+ATTR_LATEX: :placement [H]
+   | *blau*   | Docker-Container           |
+   | *orange* | Schnittstelle/Netzwerkport |
+   | *gelb*   | Prozess/Datei              |
+
+   Zusätzlich wird Redis verwendet, um das Schreiben mit
+   beliebig vielen entfernten Logstash-Instanzen zu ermöglichen.
+   Die Daten werden dort zwischengespeichert,
+   bis sie von der lokalen Logstash-Instanz in Elasticsearch
+   geschrieben werden.
+
+   Nachfolgend werden die Lösungen im Detail betrachtet.
+
+*** L01: ELK in Docker, Kommunikation auf Docker begrenzen
+    \\
+    Die einzelnen Komponenten laufen in getrennten Docker-Containern
+    und sind dadurch logisch wie physikalisch voneinander
+    und vom Host-System getrennt (separation of concerns).
+    Von außen zugänglich gemacht werden nur der SSH-Daemon des Host-Systems,
+    der HTTPS-Port des nginx-Proxy und der Log-Input zu Redis.
+
+    #+NAME: fig:Network
+    #+CAPTION: Kommunikation zwischen Docker-Containern
+    #+ATTR_LATEX: :placement [H]
+    [[./grodon/img/network.png]]
+
+    #+NAME: tab:leg_l01
+    #+ATTR_LATEX: :placement [H]
+    | *orange* | Schnittstelle/Netzwerkport |
+    | *blau*   | Docker-Container           |
+    | *gelb*   | Prozess                    |
+    | *grün*   | SSL-Tunnel                 |
+
+    Die Kommunikation zwischen den lokalen Docker-Containern ist zwar nicht verschlüsselt,
+    beschränkt sich allerdings auf das Host-System und kann so auch nur mit root-Rechten
+    mitgelesen werden.
+    Die Ports für Logstash, Kibana und Elasticsearch werden nicht für das
+    Host-System freigegeben (=exposed=) und sind dadurch nur für lokal laufende
+    Docker-Container erreichbar[[cite:docker_links,docker_security]].
+
+*** L02: Datenübertragung zwischen Logstash über stunnel
+    \\
+    Für die sichere Kommunikation zwischen entfernten
+    mit lokal laufenden Logstash Instanzen wird
+    stunnel verwendet.
+    Auf den entfernten Geräten (hier beispielsweise das
+    sichere Gateway oder die Heim-Überwachung) wird ein
+    stunnel Client aufgesetzt, welche mit einem
+    stunnel Server verbunden sind, über welchen sie
+    die Daten in einer Redis-Datenbank zwischenspeichern.
+    Aus dieser liest die lokal laufende Logstash Instanz
+    die Daten aus und gibt sie an Elasticsearch weiter.
+
+    #+NAME: fig:Lostash_Network
+    #+CAPTION: Kommunikation in Logstash
+    #+ATTR_LATEX: :placement [H]
+    [[./grodon/img/logstash_network.png]]
+
+    #+NAME: tab:leg_l02
+    #+ATTR_LATEX: :placement [H]
+    | *orange* | Schnittstelle/Netzwerkport |
+    | *blau*   | Docker-Container           |
+    | *gelb*   | Prozess                    |
+    | *grün*   | SSL-Tunnel                 |
+
+    Nach außen ist nur der stunnel Server erreichbar,
+    Daten können nicht direkt an Redis oder Logstash
+    gesendet werden.
+    Zusätzlich werden vom stunnel Server nur Daten
+    angenommen, welche mit seinem eigenen public key
+    verschlüsselt und einem ihm bekannten private key
+    signiert sind.
+    Umgekehrt gilt für die stunnel Clients,
+    dass sie nur an den Server senden,
+    wenn dieser sich mit einer korrekten Signatur ausweisen kann.
+
+    Zusätzlich wäre es auch möglich, die Hostnamen zu prüfen,
+    und die Übertragung bei einem falschen "`Common Name"' (=CN=)
+    abzubrechen. In einem lokalen Netz sollten aber bereits
+    die oben genannten Punkte ausreichen.
+
+*** L03: nginx mit SSL als Reverse Proxy vor Kibana
+    \\
+    Um den Zugriff auf Kibana nur für berechtigte Benutzer zu ermöglichen
+    wird nginx als Reverse-Proxy eingesetzt.
+
+    #+NAME: fig:Nginx_Proxy
+    #+CAPTION: nginx als Reverse Proxy
+    #+ATTR_LATEX: :placement [H]
+    [[./grodon/img/nginx.png]]
+
+    Da jede Anfrage über nginx geht, lässt sich hier auch einfach HTTPS
+    erzwingen und prüfen, ob der anfragende Benutzer autorisiert ist.
+
+    Da nginx von sich aus kein OAuth unterstützt,
+    wird für einen ersten Test "`basic authentication"' eingesetzt.
+    In einer späteren Version soll dies allerdings,
+    wie im Dashboard, durch eine
+    Authentifikation gegen OAuth ersetzt werden.
+
+*** L04: Persistierung von Elasticsearch und Logstash mit eCryptfs
+    \\
+    Um den Elasticsearch Index und
+    den Zwischenspeicher von Logstash,
+    für den Redis verwendet wird, sicher zu speichern,
+    wird mit eCryptfs ein verschlüsseltes Volumen erstellt.
+    Dieses wird dann in den Docker-Container eingebunden,
+    wo es wie ein normaler Ordner benutzt werden kann.
+
+    #+NAME: fig:Storage
+    #+CAPTION: Persistierung mit eCryptfs
+    #+ATTR_LATEX: :placement [H]
+    [[./grodon/img/storage.png]]
+
+    #+NAME: tab:leg_l04
+    #+ATTR_LATEX: :placement [H]
+    | *blau* | Docker-Container |
+    | *gelb* | Prozess/Datei    |
+
+* Implementierung
+  Nachdem bereits für das "`SichHeimMonitor Dashboard"' gezeigt wurde, wie man
+  ein Docker-Image von Grund auf sicher baut, wird hier für einen ersten
+  Implementierungs-Prototypen darauf verzichtet und die auf Docker-Hub
+  bereitgestellten Images als Grundlage verwendet.
+
+  Ein Docker-Image, welches speziell mit Fokus auf Sicherheit gebaut wurde,
+  ist einem sehr allgemein gehaltenen Image zwar in jedem Fall vorzuziehen,
+  durch die Veröffentlichung von Dockerfiles auf Docker-Hub kann aber
+  zumindest der Entstehungsprozess des Images nachverfolgt werden.
+
+  Da Ordner und Dateien im Docker-Container beliebig eingehängt werden
+  können, ist für die Implementierung keine feste Ordnerstruktur notwendig.
+  Der Einfachheit halber werden aber alle Dateien zu einem Docker-Container
+  in einem Ordner gespeichert.
+
+** Konfiguration von nginx label:nginx
+*** HTTP Authentication
+    \\
+    Zur Erzeugung und Verwendung der Authentifikationsdaten für nginx wird
+    das sehr ausführliche Tutorial von digitalocean[[cite:nginx_auth]] verwendet.
+
+    Mit dem Programm =htpasswd= aus den Apache Utils werden Logindaten erzeugt
+    und in der Datei =./htpasswd= gespeichert. Auf diese Datei wird später in
+    nginx referenziert.
+
+    #+BEGIN_SRC sh
+htpasswd -c ./htpasswd benutzer1
+htpasswd ./htpasswd benutzer2
+    #+END_SRC
+
+*** Server Zertifikat
+    \\
+    Da der Server nur privat genutzt wird und die Zertifizierung im besten
+    Fall nur gegenüber des "`SichHeimMonitor Dashboards"' stattfindet, reicht
+    hier ein selbst signiertes Zertifikat.
+
+    Auch hierfür gibt es wieder ein sehr ausführliches Tutorial von
+    digitalocean[[cite:nginx_cert]].
+
+    Mit =openssl= werden Schlüssel und Zertifikat erzeugt und im Ordner
+    =$nxdir= gespeichert. Auch diese Dateien werden später in nginx referenziert.
+
+    #+BEGIN_SRC sh
+openssl req -x509 -nodes -days 365 \
+  -newkey rsa:2048 \
+  -subj '/CN=nginx/O=SSH/C=DE' \
+  -keyout $nxdir/ssl.key \
+  -out $nxdir/ssl.crt
+    #+END_SRC
+
+*** Besonderheiten für Docker
+    \\
+    Bei der Konfiguration von nginx unter Docker ist zu beachten, dass man
+    nginx mit =worker_processes 1;= auf einen Prozess begrenzt und mit
+    =daemon off;= der Prozess im Vordergrund gehalten wird.
+
+    Ansonsten ist die Konfiguration relativ simpel und wird wie in diesem
+    Tutorial[[cite:nginx_conf]] beschrieben durchgeführt.
+
+*** Sichere SSL-Konfiguration label:sec_nginx_conf
+    \\
+    Zur Härtung von nginx wird der Server wie in diesen
+    Artikeln[[cite:nginx_harden,mozilla_tls]] konfiguriert.
+    Neben den beschriebenen Einstellungen für HTTP Strict Transport Security und
+    Online Certificat Status Protocol (OCSP) Stapling,
+    werden zusätzlich die Protokolle "`TLS 1.0"' und
+    "`TLS 1.1"' deaktiviert wie auch ein geringerer Satz
+    an Cipher Suites gewählt.
+    Dies führt zwar dazu, dass ältere Browser nicht mehr
+    unterstützt werden, da der Dienst aber nur von uns selbst
+    genutzt werden soll, ist das hier kein Problem.
+    Zusätzlich werden für das Diffie-Hellman-Verfahren zum
+    Schlüsselaustasch neue Parameter erzeugt.
+    Dies ist deshalb wichtig, da sonst die mitgelieferten und
+    für alle Installationen gleichen Parameter verwendet werden.
+
+*** Ausblenden von Informationen in Fehlerseiten
+    \\
+    Im Auslieferungszustand werden in Fehlerseiten von nginx der verwendete
+    Webserver-Name sowie die Versionsnummer ausgegeben.
+    Dadurch würde es bei aufkommenden Sicherheitslücken Angreifern erleichtert werden,
+    diese auszunutzen.
+    Allgemein wird deshalb dazu geraten, die Versionsnummer auszublenden oder
+    die Fehlerseiten komplett zu ändern[[cite:nginx_harden_p1]].
+    Um diese Ausnutzung zu verhindern, soll bei auftretenden Fehlern eine
+    leere Seite ausgeliefert werden.
+    Dies ist zwar für Endanwender im Fehlerfall nicht sehr informativ,
+    da der Dienst aber ausschließlich von uns selbst verwendet wird,
+    ist dies nicht relevant, da wir auch Zugriff auf die Fehler-Logs von nginx haben.
+
+*** Abschließende Konfigurationsdatei
+    \\
+    #+CAPTION: nginx.conf
+    #+BEGIN_SRC conf
+user  nginx;
+worker_processes  1;
+...
+
+http {
+  add_header Strict-Transport-Security "max-age=31536000; \
+    includeSubdomains; preload";
+  add_header X-Frame-Options DENY;
+  add_header X-Content-Type-Options nosniff;
+
+  ssl_protocols TLSv1.2;
+
+  ssl_ciphers AES256+EECDH:AES256+EDH:!aNULL;
+  ssl_ecdh_curve secp384r1;
+
+  ssl_stapling on;
+  ssl_stapling_verify on;
+
+  ssl_certificate         /var/ssl-cert/ssl.crt;
+  ssl_certificate_key     /var/ssl-cert/ssl.key;
+  ssl_trusted_certificate /var/ssl-cert/ssl.crt;
+  ssl_session_timeout 10m;
+  ssl_session_cache shared:SSL:10m;
+  ssl_session_tickets off;
+  ssl_dhparam             /etc/ssl/certs/dhparam.pem;
+
+  server {
+    listen 443 ssl;
+
+    auth_basic              "Restricted";
+    auth_basic_user_file    /etc/nginx/.htpasswd;
+
+    error_pages 400 401 ... /error/err.html;
+
+    location / {
+      proxy_pass http://kibana:5601;
+      proxy_http_version 1.1;
+      proxy_set_header Upgrade $http_upgrade;
+      proxy_set_header Connection 'upgrade';
+      proxy_set_header Host $host;
+      proxy_cache_bypass $http_upgrade;
+    }
+
+    location ^~ /error/ {
+      alias /usr/share/nginx/html/;
+      internal;
+    }
+  }
+  ...
+}
+    #+END_SRC
+
+*** Erzeugen des Docker-Images
+    \\
+    Das Docker-Image wird mit dem Befehl
+
+    #+BEGIN_src sh
+    docker build -t elk-nginx ./nginx
+    #+END_src
+    gebaut.
+    =./nginx= ist dabei der Ordner in dem sich die Dateien
+    =nginx.conf=, =htpasswd= und der erzeugte SSL-Schlüssel befinden.
+    Auch ist dort das nachfolgende =Dockerfile= enthalten,
+    mit welchem das Image erzeugt wird.
+
+    #+CAPTION: nginx Dockerfile
+    #+BEGIN_SRC dockerfile -n
+FROM nginx:latest
+MAINTAINER Armin Grodon <me@armingrodon.de>
+
+RUN openssl dhparam -dsaparam \
+  -out /etc/ssl/certs/dhparam.pem 2048
+
+VOLUME ["/var/cache/nginx"]
+
+EXPOSE 80 443
+
+CMD ["nginx", "-g", "daemon off;"]
+    #+END_SRC
+
+    Mit dem Befehl =openssl dhparam= werden beim Erstellen
+    des Images neue Parameter für das Diffie-Hellman-Verfahren
+    erzeugt[[cite:mozilla_tls]].
+    Hierbei wird während der Testphase die Parameter mit der Option
+    =-dsaparam= als "`DSA Parameter"' erzeugt und
+    in "`Diffie-Hellman Parameter"' umgewandelt,
+    da das Erzeugen von 4096 bit "`Diffie-Hellman Parameter"' zwischen
+    einigen Stunden und wenigen Tagen dauern kann.
+    Im Produktiveinsatz sollte die Zeile aber durch
+    #+BEGIN_src sh
+RUN openssl dhparam -out /etc/ssl/certs/dhparam.pem 4096
+    #+END_src
+    ersetzt werden.
+
+    Mit =EXPOSE= wird angegeben, dass es spät möglich ist,
+    für den Docker-Container die Ports 80 und 443 frei zu geben.
+
+** Konfiguration von Logstash
+   Die Konfiguration von Logstash unterteilt
+   sich in den Server,
+   welcher die Daten aus Redis liest und
+   in Elasticsearch speichert,
+   dem Zwischenspeicher,
+   für welchen Redis verwendet wird und der Client,
+   welcher die Daten an Redis sendet.
+
+*** Grok-Parser für SSH und iptables
+    \\
+    Um das Log-Format von =iptables= richtig interpretieren zu können,
+    benötigt Logstash zusätzliche Informationen.
+    Diese können beispielsweise in einer Art regulärem Ausdruck
+    als "`grok"'-Filter angegeben werden[[cite:elastic_grok]].
+    Diese bestehen aus Text, der identisch sein muss und
+    Platzhaltern, welche gegebenenfalls einem bestimmten Typen
+    entsprechen müssen.
+    Die Werte die den Platzhaltern entsprechen, werden dann
+    mit spezifiziertem Typen an Elasticsearch weitergegeben.
+
+    Einfachere Regeln können direkt in die Logstash-Konfiguration geschrieben werden.
+
+    #+CAPTION: Grok-Filter für SSH
+    #+BEGIN_src GROK -n
+grok {
+  match => [ "message",
+    "%{SYSLOGTIMESTAMP:timestamp} %{HOSTNAME:host_target} \
+      sshd\[%{BASE10NUM}\]: Failed password for invalid user \
+      %{USERNAME:username} from %{IP:src_ip} port \
+      %{BASE10NUM:port} ssh2" ]
+  add_tag => [ "ssh_brute_force_attack" ]
+}
+    #+END_src
+
+    Dieser Filter trifft zum Beispiel auf alle SSH-Logs zu,
+    welche durch die Verwendung eines falschen Benutzernamen und Passworts
+    erzeugt werden. Neben den Angaben wie Zeitpunkt, Benutzername und IP wird
+    diese Anfrage mit einem zusätzlichen "`Tag"' gekennzeichnet,
+    in diesem Fall um die Anfrage als vermutlichen Brute-Force-Angriff zu
+    kennzeichnen.
+    Dadurch kann später besser nach bestimmten Ereignissen gesucht werden.
+
+
+    Für kompliziertere Filter können eigene Dateien angelegt werden.
+    Diese enthalten für jede neue Zeile ein Paar aus Alias und Filter.
+    Dadurch kann man verschachtelte Filter schreiben und den Alias
+    in der Konfiguration verwenden.
+
+    #+CAPTION: Grok-Filter für iptables
+    #+BEGIN_src GROK -n
+NETFILTERMAC %{COMMONMAC:dst_mac}:%{COMMONMAC:src_mac}:\
+  %{ETHTYPE:ethtype}
+ETHTYPE (?:(?:[A-Fa-f0-9]{2}):(?:[A-Fa-f0-9]{2}))
+IPTABLES1 (?:IN=%{WORD:in_device} OUT=(%{WORD:out_device})?
+  MAC=%{NETFILTERMAC} SRC=%{IP:src_ip}
+  DST=%{IP:dst_ip}.*(TTL=%{INT:ttl})?.*PROTO=%{WORD:proto}?\
+  .*SPT=%{INT:src_port}?.*DPT=%{INT:dst_port}?.*)
+IPTABLES2 (?:IN=%{WORD:in_device} OUT=(%{WORD:out_device})?
+  MAC=%{NETFILTERMAC} SRC=%{IP:src_ip}
+  DST=%{IP:dst_ip}.*(TTL=%{INT:ttl})?.*PROTO=%{INT:proto}?.*)
+IPTABLES (?:%{IPTABLES1}|%{IPTABLES2})
+    #+END_src
+
+    Da die einzelnen Filter zu lang für eine Zeile waren,
+    wurden sie hier umgebrochen.
+
+    Der letzte Filter =IPTABLES=,
+    welcher wiederum entweder dem Filter
+    =IPTABLES1= oder =IPTABLES2= entsprechen muss,
+    kann dann in der Konfiguration verwendet werden.
+
+    #+BEGIN_src GROK -n
+grok {
+  match => [ "message", "%{IPTABLES}" ]
+  patterns_dir => [ "/var/lib/logstash/grok" ]
+}
+    #+END_src
+
+*** Konfiguration des Servers
+    \\
+    Möchte man, dass die lokal laufende Logstash-Instanz
+    neben den zwischengespeicherten Daten aus Redis auch
+    die lokalen Daten aus SSH (=auth.log=) und iptables (=kern.log=)
+    an Elasticsearch sendet, sieht die Konfiguration
+    folgendermaßen aus:
+
+    #+CAPTION: logstash.conf des Servers
+    #+BEGIN_src conf -n
+input {
+  file {
+    type => "linux-syslog"
+    path => "/var/host/auth.log"
+  }
+
+  file {
+    type => "kern-log"
+    path => "/var/host/kern.log"
+  }
+
+  redis {
+    host => "redis"
+    data_type => "list"
+    key => "logstash"
+    codec => json
+  }
+}
+
+filter {
+  ...
+}
+
+output {
+  elasticsearch {
+    action => "index"
+    hosts => "elasticsearch:9200"
+    index => "logstash-host"
+    workers => 1
+  }
+}
+    #+END_src
+
+*** Erzeugen des Docker-Images für den Server
+    \\
+    Das Docker-Image wird mit dem Befehl
+    #+BEGIN_src sh
+    docker build -t elk-logstash ./logstash
+    #+END_src
+    gebaut.
+    =./logstash= ist dabei der Ordner in dem sich der Grok-Filter
+    =iptables= und und die Konfiguration befindet.
+    Auch ist dort das nachfolgende =Dockerfile= enthalten,
+    mit welchem das Image erzeugt wird.
+
+    #+CAPTION: Logstash Dockerfile
+    #+BEGIN_SRC dockerfile -n
+FROM logstash:latest
+MAINTAINER Armin Grodon <me@armingrodon.de>
+
+RUN usermod -G adm logstash
+
+RUN mkdir -p /var/lib/logstash/grok
+COPY iptables /var/lib/logstash/grok
+
+EXPOSE 5000
+
+ENTRYPOINT ["/docker-entrypoint.sh"]
+CMD ["logstash", "-f", "/etc/logstash/conf.d/logstash.conf"]
+    #+END_SRC
+
+    Um Leserechte für die Logdateien zu erhalten,
+    wird der Benutzer =logstash= in die Gruppe =adm= aufgenommen.
+*** Konfiguration von Redis label:redis_conf
+    \\
+    Für Redis selbst muss keine Konfiguration vorgenommen werden,
+    allerdings für den stunnel Server,
+    welcher mit Redis in einem Container läuft.
+
+    Auf Client- und Server-Seite werden RSA-Schlüssel und -Zertifikate erstellt,
+    die Zertifikate werden ausgetauscht.
+    Die Daten des Servers werden in =$stunnels= und die des Clients in =$stunnelc=
+    gespeichert. Diese Ordner werden dann später in das Docker-Image
+    eingebunden.
+
+    #+CAPTION: Erzeugung der Schlüssel für stunnel
+    #+BEGIN_src sh -n
+# client (shipper) stunnel
+openssl genrsa \
+    -out $stunnelc/client.key 2048
+openssl req -new -x509 -nodes -days 365 \
+    -subj '/CN=logstash/O=SHM/C=DE' \
+    -key $stunnelc/client.key \
+    -out $stunnelc/client.crt
+cp $stunnelc/client.crt $stunnels
+
+# server (redis) stunnel
+openssl genrsa \
+    -out $stunnels/server.key 2048
+openssl req -new -x509 -nodes -days 365 \
+    -subj '/CN=redis/O=SHM/C=DE' \
+    -key $stunnels/server.key \
+    -out $stunnels/server.crt
+cp $stunnels/server.crt $stunnelc
+    #+END_src
+
+    Zusätzlich wird ein Schlüssel für eCryptfs aus
+    Zufallsdaten erstellt und an einem sicheren Ort,
+    beispielsweise einem verschlüsselten home-Ordner
+    oder einem verschlüsselten, externen Datenträger,
+    als =$rekey= gespeichert.
+
+    #+BEGIN_src sh
+echo "passwd=" > $rekey
+sudo dd if=/dev/urandom count=1 bs=32 >> $rekey
+    #+END_src
+    In der stunnel-Konfiguration wird als Eingangsport
+    =8888= und als Ausgangsport =6379= verwendet.
+    Dadurch werden alle eingehenden Daten an Redis weitergeleitet.
+
+    #+CAPTION: stunnel.conf des Servers
+    #+BEGIN_src conf -n
+verify = 2
+client = no
+pid = /var/run/stunnel.pid
+
+[logstash]
+accept = 8888
+connect = 127.0.0.1:6379
+cert = /etc/stunnel/server.crt
+key = /etc/stunnel/server.key
+CAfile = /etc/stunnel/client.crt
+    #+END_src
+
+    Mit =verify = 2= wird angegeben, dass auf Verschlüsselung und
+    Signatur geachtet wird, nicht aber auf den Hostnamen.
+
+*** Erzeugen des Docker-Images für Redis label:redis
+    Das Docker-Image wird mit dem Befehl
+    #+BEGIN_src sh
+    docker build -t elk-redis ./redis
+    #+END_src
+    gebaut.
+    =./redis= ist dabei der Ordner in dem sich der Schlüssel
+    und das Zertifikat des Servers, sowie die Zertifikate aller
+    Clients befinden.
+    Auch ist dort das nachfolgende =Dockerfile= enthalten,
+    mit welchem das Image erzeugt wird.
+
+    #+CAPTION: Redis Dockerfile
+    #+BEGIN_SRC dockerfile -n
+FROM redis:latest
+
+RUN apt-get update && apt-get install \
+  -y --no-install-recommends \
+  stunnel4 \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN sed -i "s/ENABLED=0/ENABLED=1/" /etc/default/stunnel4
+
+COPY entrypoint.sh /
+
+EXPOSE 8888
+
+ENTRYPOINT [ "/entrypoint.sh" ]
+CMD [ "redis-server" ]
+    #+END_SRC
+
+    Im vorgefertigten Docker-Image (=redis:latest=) wird
+    stunnel installiert und mit dem =sed=-Befehl aktiviert.
+*** Konfiguration des Clients
+    \\
+    Soll eine entfernte Logstash-Instanz ein Datei,
+    hier =/var/input.txt= überwachen, sieht
+    die Konfiguration folgendermaßen aus:
+
+    #+CAPTION: logstash.conf des Clients
+    #+BEGIN_src conf -n
+input {
+  file {
+    path => "/var/input.txt"
+  }
+}
+
+output {
+  redis {
+    host => "localhost"
+    data_type => "list"
+    key => "logstash-remote"
+    codec => json
+  }
+}
+    #+END_src
+
+    Dadurch werden die Daten an den stunnel Client
+    gesendet, welchen Logstash für eine Redis
+    Datenbank hält.
+
+    Stunnel wird ähnlich wie in Abschnitt ref:redis_conf
+    konfiguriert, das verwendete Schlüsselpaar wurde
+    bereits in diesem Abschnitt erzeugt.
+
+    #+CAPTION: stunnel.conf des Clients
+    #+BEGIN_src conf -n
+verify = 2
+client = yes
+pid = /var/run/stunnel.pid
+
+[logstash]
+accept = 6379
+connect = redis:8888
+cert = /etc/stunnel/client.crt
+key = /etc/stunnel/client.key
+CAfile = /etc/stunnel/server.crt
+    #+END_src
+
+    Im Gegensatz zum Server gibt sich der Client
+    allerdings als lokal laufende Redis-Instanz aus.
+    Der Name =redis= muss in =/etc/hosts= auf die
+    Adresse des Hosts zeigen, auf dem ELK läuft.
+
+*** Erzeugen des Docker-Images für den Client
+    \\
+    Das Docker-Image wird mit dem Befehl
+    #+BEGIN_src sh
+    docker build -t elk-shipper ./shipper
+    #+END_src
+    gebaut.
+    =./shipper= ist dabei der Ordner in dem sich
+    eventuelle Filter, die Konfiguration und
+    alle Dateien für den stunnel Client befindet.
+    Auch ist dort das nachfolgende =Dockerfile= enthalten,
+    mit welchem das Image erzeugt wird.
+
+    #+CAPTION: Shipper Dockerfile
+    #+BEGIN_SRC dockerfile -n
+FROM logstash:latest
+MAINTAINER Armin Grodon <me@armingrodon.de>
+
+RUN apt-get update && apt-get install \
+  -y --no-install-recommends \
+  stunnel4 \
+  && rm -rf /var/lib/apt/lists/*
+
+RUN sed -i "s/ENABLED=0/ENABLED=1/" /etc/default/stunnel4
+
+COPY entrypoint.sh /
+COPY stunnel/* /etc/stunnel/
+COPY logstash.conf /etc/logstash/conf.d/logstash.conf
+
+ENTRYPOINT [ "/entrypoint.sh" ]
+CMD [ "logstash", "-f", "/etc/logstash/conf.d/logstash.conf" ]
+    #+END_SRC
+
+    Um das Image verteilen zu können, wird es exportiert
+
+    #+BEGIN_src sh
+# export shipper image (local host)
+docker save elk-shipper > shipper.tar
+# import shipper image (remote host)
+docker load < shipper.tar
+    #+END_src
+
+** Konfiguration von Elasticsearch
+   Da die Speicherung von Daten aus Logstash und
+   das Anzeigen dieser in Kibana ein
+   Standard-Anwendungsfall von Elasticsearch ist,
+   muss an Elasticsearch selbst keine Konfiguration
+   vorgenommen werden.
+
+   Es muss lediglich der Schlüssel für eCryptfs
+   erzeugt werden.
+
+*** Erzeugen des eCryptfs-Schlüssels
+    \\
+    Ähnlich wie in ref:redis_conf wird ein Schlüssel
+    aus Zufallsdaten erzeugt und in =$eskey= gespeichert.
+    Für diesen Schlüssel gelten ebenfalls die gleichen
+    Sicherheitsanforderungen.
+    #+BEGIN_src sh
+echo "passwd=" > $eskey
+sudo dd if=/dev/urandom count=1 bs=32 >> $eskey
+    #+END_src
+
+*** Erzeugen des Docker-Images
+    \\
+    Das Docker-Image wird mit dem Befehl
+    #+BEGIN_src sh
+    docker build -t elk-elasticsearch ./elasticsearch
+    #+END_src
+    gebaut.
+    =./elasticsearch= ist dabei der Ordner,
+    der das nachfolgende =Dockerfile= enthält,
+    mit welchem das Image erzeugt wird.
+
+    #+CAPTION: Elasticsearch Dockerfile
+    #+BEGIN_SRC dockerfile -n
+FROM elasticsearch:latest
+MAINTAINER Armin Grodon <me@armingrodon.de>
+
+CMD [ "elasticsearch", "-Des.network.host=0.0.0.0" ]
+    #+END_SRC
+
+** Konfiguration von Kibana
+   Bevor Kibana gestartet wird muss Elasticsearch
+   bereits laufen.
+   Dafür wird ein kleines Skript erstellt,
+   in welchem mit =netcat= geprüft wird,
+   ob eine Verbindung zu Elasticsearch aufgebaut
+   werden kann.
+
+   #+CAPTION: waitES.sh
+   #+BEGIN_src sh -n
+while true; do
+    nc -q 1 elasticsearch 9200 \
+    2> /dev/null && break
+done
+
+kibana
+   #+END_src
+
+*** kibana.yml
+    \\
+    In der Konfigurationsdatei von Kibana
+    wird festgelegt, auf welchem Port gelauscht
+    werden soll, auf welchem Host und Port
+    Elasticsearch läuft und welche Plugins
+    verwendet werden sollen.
+
+    #+CAPTION: kibana.yml
+    #+BEGIN_src yml -n
+port: 5601
+host: "0.0.0.0"
+
+elasticsearch_url: "http://elasticsearch:9200"
+elasticsearch_preserve_host: true
+
+kibana_index: ".kibana"
+
+default_app_id: "discover"
+request_timeout: 300000
+shard_timeout: 0
+
+bundled_plugin_ids:
+    - plugins/dashboard/index
+    - plugins/discover/index
+    - plugins/doc/index
+    - plugins/kibana/index
+    - plugins/markdown_vis/index
+    - plugins/metric_vis/index
+    - plugins/settings/index
+    - plugins/table_vis/index
+    - plugins/vis_types/index
+    - plugins/visualize/index
+    #+END_src
+
+*** Erzeugen des Docker-Images
+    \\
+    Das Docker-Image wird mit dem Befehl
+    #+BEGIN_src sh
+docker build -t elk-kibana ./kibana
+    #+END_src
+    gebaut.
+    =./kibana= ist dabei der Ordner in dem sich die Dateien
+    =kibana.yml= und das Skript =waitES.sh= befindet.
+    Auch ist dort das nachfolgende =Dockerfile= enthalten,
+    mit welchem das Image erzeugt wird.
+
+    #+CAPTION: Kibana Dockerfile
+    #+BEGIN_SRC dockerfile -n
+FROM kibana:latest
+MAINTAINER Armin Grodon <me@armingrodon.de>
+
+RUN apt-get update
+RUN apt-get -y --force-yes install netcat
+
+COPY waitES.sh /tmp/waitES.sh
+RUN chmod +x /tmp/waitES.sh
+
+RUN kibana plugin --install elastic/sense
+
+EXPOSE 5601
+
+CMD ["/tmp/waitES.sh"]
+    #+END_SRC
+
+*** Einrichten eines Dashboards
+    \\
+    Der Hauptteil der Konfiguration von Kibana
+    findet nach dem Start statt.
+
+    Ziel ist es ein Dashboard mit grafischen Darstellungen
+    der gesammelten Daten zu erzeugen.
+
+
+    Nachdem genug Daten in Elasticsearch gesammelt
+    sind, muss in Kibana ein "`index pattern"' ausgewählt
+    werden um in Elasticsearch zu suchen.
+
+    #+NAME: fig:Kibana_Index
+    #+CAPTION: Erzeugung eines index pattern
+    #+ATTR_LATEX: :placement [H]
+    [[./grodon/img/kibana-index.png]]
+
+    Anschließend lassen sich im Reiter "`Visualize"' Diagramme
+    aus Suchanfragen erzeugen. Zum Beispiel ein Kreisdiagramm
+    aus allen Netzwerkanfragen (hier ohne Broadcasts),
+    aufgeteilt nach den 10 am Meisten angefragten Ports.
+
+    #+NAME: fig:Kibana_Vis
+    #+CAPTION: Erstellung eines Diagramms
+    #+ATTR_LATEX: :placement [H]
+    [[./grodon/img/kibana-vis.png]]
+
+    Hat man genug Diagramme erstellt, lassen sich diese in
+    zusammen in einem Dashboard speichern.
+
+    #+NAME: fig:Kibana_Dash
+    #+CAPTION: Kibana Dashboard
+    #+ATTR_LATEX: :placement [H]
+    [[./grodon/img/kibana-dash.png]]
+
+** Zusammenführung in Skripten
+   Die Befehle der obigen Abschnitte werden in
+   drei Skripten zusammengefasst.
+
+   =make.sh= enthält die Erzeugung aller Schlüssel
+   und die Generierung der Docker-Images. Es wird
+   einmal, am Anfang, zur Initialisierung ausgeführt.
+
+   =start.sh= enthält das mounten der eCryptfs-Volumen und
+   das Starten und Verknüpfen aller lokalen Docker-Container.
+
+   =stop.sh= stoppt alle Docker-Container und
+   verschlüsselt die eCryptfs-Volumen wieder.
+
+** Sonstige Aufgaben
+   Neben der Konfiguration der Komponenten von ELK fallen Aufgaben zur
+   Absicherung an, auf die hier nicht im Detail eingegangen wird.
+
+*** Härtung des Servers
+    \\
+    Der SSH Zugang wird nach dem OWASP Guideline für Web Application Server[[cite:owasp_mcree]] gehärtet
+    und iptables nach selbigem Leitfaden konfiguriert,
+    um eingehenden Verkehr nur noch für die eingehend Ports aus Kapitel [[ref:sec_loesung]] zuzulassen.
+
+* Test und Verifizierung
+  Um sicher zu gehen, dass die in Abschnitt ref:sec_loesung
+  genannten Maßnahmen eingehalten werden, muss die
+  Implementierung getestet werden.
+
+** L01: Kommunikation zwischen Docker-Containern
+   Die getroffene Annahme ist, dass auf Docker-Container,
+   welche keine Ports freigegeben haben (z.B. mit =-p "80:80"=)
+   nicht vom Hostsystem zugegriffen werden kann.
+
+   Um dies zu überprüfen, starten wir zunächst einen Docker-Container mit:
+   #+BEGIN_src sh
+docker run -it --rm -p "80:80" nginx:latest
+   #+END_src
+
+   Dieser Container verwendet intern die Ports 80 un 443,
+   von denen wir explizit den Port 80 an das Host-System freigeben.
+   Fragen wir nun diesen Port am virtuellen Docker-Host (172.17.0.1) an,
+   erhalten wir als Ausgabe die Startseite von nginx.
+
+   #+BEGIN_src sh
+$ curl 172.17.0.1:80
+<!DOCTYPE html>
+...
+   #+END_src
+
+
+   Starten wir nun aber selbigen Container ohne den Port frei zu geben,
+   #+BEGIN_src sh
+docker run -it --rm nginx:latest
+   #+END_src
+
+   erhalten wir auf die gleiche Anfrage keine Antwort.
+   #+BEGIN_src sh
+$ curl 172.17.0.1:80
+curl: (7) Failed to connect ... Connection refused
+   #+END_src
+
+** L02: Datenübertragung zwischen Logstash
+   Hier ist die getroffene Annahme, dass die Kommunikation zwischen dem
+   Logstash-Shipper und dem lokal laufenden Logstash durch stunnel verschlüsselt und
+   signiert stattfindet.
+   Da wir möglichst andere Faktoren und Nachrichten ausschließen wollen und
+   der essenzielle Part die Kommunikation über stunnel ist,
+   wird als Testaufbau wieder nginx und der Einfachheit halber ein
+   Ubuntu-Container gewählt, dabei wird ähnlich wie in der [[nameref:redis_conf]]
+   vorgegangen.
+   Den nginx-Container starten wir mit:
+
+   #+BEGIN_src sh
+docker run -it --rm -p "80:80" -p "8888:8888" nginx:latest
+   #+END_src
+   stunnel wird auf dem Container so konfiguriert,
+   dass es auf Port 8888 lauscht und auf Port 80 weiterleitet.
+   Dadurch sollte der Client auf Port 80 unverschlüsselt und
+   auf Port 8888, über stunnel, verschlüsselt mit dem Webserver kommunizieren können.
+
+   Auf dem Ubuntu-Container wird ebenfalls stunnel installiert und
+   so konfiguriert, dass es auf dem lokalen Port 80 lauscht und an Port 8888
+   des Host-Systems weiterleitet, auf welchem der nginx-Container lauscht.
+
+   Abschließend kopieren wir die für Redis und Shipper generierten Schlüssel
+   auf die Container.
+
+*** Verschlüsselung
+    \\
+    Um zu überprüfen, ob die Daten verschlüsselt übertragen werden,
+    werden wir einmal eine unverschlüsselte und
+    anschließend eine verschlüsselte Verbindung zwischen
+    Client (Ubuntu) und Server (nginx) aufbauen und
+    beide Verbindungen mit Wireshark aufzeichnen.
+
+    #+NAME: fig:Architektur
+    #+CAPTION: Wireshark Versuchsaufbau
+    #+ATTR_LATEX: :placement [H]
+    [[./grodon/img/wireshark.png]]
+
+    #+NAME: tab:leg_wireshark
+    #+ATTR_LATEX: :placement [H]
+    | *blau*   | Docker-Container           |
+    | *orange* | Schnittstelle/Netzwerkport |
+    | *gelb*   | Prozess                    |
+    | *rot*    | Wireshark im Netzwerk      |
+
+    Baut der Client die Verbindung direkt zu Port 80 des Servers auf,
+    sehen wir in Wireshark folgende Ausgabe:
+
+    #+CAPTION: Klartext-Mitschnitt von Wireshark
+    #+NAME: fig:Wireshark_stunnel
+    #+ATTR_LATEX: :placement [H]
+    [[./grodon/img/wireshark1.png]]
+
+    Wie zu erwarten ist die Übertragung in Klartext.
+    Baut der Client die Verbindung stattdessen über stunnel auf,
+    sehen wir in Wireshark weder übertragene Protokolle,
+    noch den darin enthaltenen Inhalt.
+
+    #+CAPTION: Verschlüsselter Mitschnitt von Wireshark
+    #+NAME: fig:Wireshark_stunnel_enc
+    #+ATTR_LATEX: :placement [H]
+    [[./grodon/img/wireshark2.png]]
+
+*** Signierung
+    \\
+    Da es nicht nur wichtig ist, dass die übertragenen Daten nicht gelesen,
+    sondern auch keine Daten bearbeitet oder eingeschleust werden,
+    testen wir nun die Überprüfung der Signatur.
+
+    Dazu erstellen wir auf dem Ubuntu-Container neue RSA-Schlüssel und
+    starten stunnel neu.
+
+    Schicken wir nun die gleiche Anfrage, erhalten wir als Antwort:
+    #+BEGIN_src sh
+$ curl localhost:80
+stunnel: ...: Service [...] accepted connection from ...
+...
+stunnel: ...: Certificate accepted: ...
+stunnel: ...: SSL_connect: ... alert unknown ca
+...
+curl: (56) Recv failure: Connection reset by peer
+    #+END_src
+    Wie man in Zeile 2 sieht, wird die Verbindung aufgebaut und
+    in Zeile 4 das Zertifikat des Servers akzeptiert.
+    Trotzdem wird die Verbindung mit der Fehlermeldung in Zeile 5
+    abgebrochen und keine Daten übertragen.
+
+    Erzeugen wir dagegen auf dem Server (nginx) neue Schlüssel und
+    spielen auf dem Client (Ubuntu) wieder die alten ein,
+    erhalten wir auf die Anfrage folgende Antwort:
+    #+BEGIN_src sh
+$ curl localhost:80
+stunnel: ...: Service [...] accepted connection from ...
+...
+stunnel: ...: Certificate check failed: ...
+stunnel: ...: SSL_connect: ... certificate verify failed
+...
+curl: (56) Recv failure: Connection reset by peer
+    #+END_src
+    Wie zuvor wird die Verbindung aufgebaut,
+    allerdings wird hier bereits das Zertifikat des Servers
+    abgelehnt und die Übertragung abgebrochen.
+
+** L03: nginx
+   Zum Testen der Sicherheit von nginx wird das Online-Tool,
+   welches von Mozilla empfohlene wird[[cite:mozilla_tls]],
+   der Seite https://www.ssllabs.com verwendet.
+   Dafür wird die Konfiguration, vorübergehend auf einem Webserver
+   gestartet und anschließend mit dem Tool getestet.
+   Um dabei die, hier nicht relevante, Fehlermeldung eines selbst signierten
+   Zertifikats zu vermeiden, wurde dafür ein signiertes Zertifikat verwendet.
+
+   #+NAME: fig:ssllabs_elk
+   #+CAPTION: Verifizierung mit ssllabs
+   #+ATTR_LATEX: :placement [H]
+   [[./grodon/img/ssllabs_elk.png]]
+
+   Die fehlenden Prozentpunkte ergeben sich daraus,
+   dass nginx bei der Auslieferung von Fehlerseiten keine zusätzlichen
+   =add_header=-Anweisungen übernimmt und
+   der Test ohne Authentifizierung auf einer 401-Seite landet.
+
+   Dies lässt sich leicht überprüfen,
+   indem die Konfiguration für eine andere Domain ohne
+   Authentifizierung eingerichtet wird.
+
+   #+NAME: fig:ssllabs
+   #+CAPTION: Perfekte Bewertung bei ssllabs
+   #+ATTR_LATEX: :placement [H]
+   [[./grodon/img/ssllabs.png]]
+
+   Hier werden auch der Header für Strict Transport Security (HSTS) richtig gesetzt.
+   Um abschließend sicher zu gehen, dass sie auch mit korrekter
+   Authentifizierung gesetzt werden, kann man mit =curl= den Header
+   der Domain anfragen und die Authentifizierungsdaten mitsenden.
+
+   #+NAME: fig:hsts
+   #+CAPTION: Test auf Strict Transport Security
+   #+ATTR_LATEX: :placement [H]
+   [[./grodon/img/hsts.png]]
+
+   Wie man sieht, ist der Header für HSTS ohne Authentifizierung,
+   wie auch schon vermutet, nicht gesetzt.
+   Sobald allerdings die korrekten Benutzerdaten gesendet werden,
+   wird auch der Header korrekt gesetzt.
+   Ein angemeldeter Benutzer ist damit,
+   wie auch ein Besucher einer Seite ohne Authentifizierung,
+   nach den aktuellen Maßstäben bestens geschützt.
+
+** L04: Verschlüsselte Persistierung
+   Um die Verschlüsselung von eCryptfs zu testen erstellen wir,
+   wie in Kapitel [[nameref:redis_conf]] beschrieben,
+   einen Schlüssel für eCryptfs und mounten damit einen Ordner.
+
+   Anschließend schreiben wir eine Textdatei und
+   geben zur Überprüfung, dass die Daten korrekt gespeichert werden
+   den Inhalt wieder aus.
+   Danach unmounten wir den Ordner und geben den Inhalt erneut aus.
+
+   #+NAME: fig:ecryptfs
+   #+CAPTION: Testen von eCryptfs
+   #+ATTR_LATEX: :placement [H]
+   [[./grodon/img/ecryptfs.png]]
+
+* Fazit
+  Obwohl das das Projekt insgesamt um einiges arbeitsintensiver war als anfangs angenommen,
+  sind wir aus eigener Sicht zu einem sehr zufriedenstellenden Ergebnis gekommen.
+  Mit ELK wurde eine zweite Möglichkeit eines Überwachungsdienstes umgesetzt,
+  welche zwar im Gegensatz zur selbst programmierten Lösung eventuell an
+  Grenzen in den Einsatzgebieten stoßen könnte,
+  dafür aber unerreichte Analyse- und Visualisierungsmöglichkeiten bietet.
+
+  Es wurde gezeigt, dass auch ein Produkt,
+  welches nicht mit Sicherheit als Hauptaugenmerk entwickelt wurde,
+  mit genug Arbeit nach Außen hin abgesichert werden und
+  dadurch hohen Sicherheitsstandards genügen kann.
+
+  Im Laufe der Absicherung habe ich viele neue Werkzeuge kennen gelernt,
+  auch wenn sich einige davon nicht für dieses Projekt geeignet haben und
+  deshalb nicht zum Einsatz kamen,
+  welche bei späteren Projekten im Sicherheitsumfeld sehr hilfreich sein können.
+
+  Im Allgemeinen hat sich der Arbeitsaufwand zumindest,
+  alleine schon durch den Erkenntnisgewinn, auf jeden Fall gelohnt.
+
+* Ausblick
+  Da das Aufsetzen der Architektur so viel Zeit in Anspruch nahm,
+  war es leider nicht möglich alle geplanten Aktionen umzusetzen.
+  Diese sind deshalb für eine spätere Iteration geplant.
+
+  Allen voran ist dies die Replizierung von ELK.
+  Dies ist besonders dadurch interessant,
+  da die einzelnen Komponenten sehr gut horizontal skalieren und
+  damit neben Ausfallsicherheit und Lastverteilung auch
+  eine schnellere Datenverarbeitung möglich ist.
+
+  Ein weiterer Punkt ist die Umsetzung von OAuth für Kibana oder
+  die Implementierung eines komplett anderen Authentifizierungsdienstes
+  für die gesamte Anwendung um nicht auf die Datenverarbeitung durch
+  ein fremdes Unternehmen angewiesen zu sein.
+
+  Als letzter Punkt ist hier noch die Auswertung der Daten aller
+  anderen Teams zu nennen.
+  Dies war leider zeitlich und organisatorisch nicht möglich.
+  Durch das Testen mit Daten von SSH und iptables hat sich aber gezeigt,
+  dass die zentrale Auswertung von verteilten Diensten
+  Informationen liefert, die sonst nicht zugänglich wären.
+  Zusätzlich bieten sie durch die grafische Aufarbeitung die Möglichkeit,
+  Zusammenhänge zu erkennen, die sonst durch die Menge an Informationen und
+  die zeitliche Abfolge nicht auf einen Blick zu verarbeiten wären.

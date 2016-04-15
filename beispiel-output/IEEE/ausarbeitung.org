@@ -7,7 +7,7 @@
 
 #+LaTeX_CLASS: ieee
 #+LaTeX_CLASS_OPTIONS: [12pt,conference,koma]
-#+LaTeX_HEADER: \input{header.inc.tex}
+#+LaTeX_HEADER: \input{inc/header.doc.tex}
 
 #+BEGIN_latex
 \begin{acronym}[LONGEST]
