@@ -1,0 +1,34 @@
+#+TITLE:       Gamifizierung von asynchronen\\ Online Fokusgruppen
+#+AUTHOR:      Armin Grodon
+#+EMAIL:       me@armingrodon.de
+#+DATE:        18.10.2016
+#+DESCRIPTION: Masterarbeit zum Thema "Gamifizierung von asynchronen Online Fokusgruppen"
+#+KEYWORDS:    Gamification Fokusgruppen "focus groups" AOFG
+#+LANGUAGE:    de
+#+OPTIONS:     H:3 toc:nil ^:{}
+
+# "Variablen" für Deckblatt
+#+LaTeX_HEADER: \newcommand{\thesis}{Masterarbeit}
+#+LaTeX_HEADER: \newcommand{\prof}{Prof. Dr. Ulrike Hammerschall}
+
+#+LaTeX_CLASS: article
+#+LaTeX_CLASS_OPTIONS: [koma,12pt]
+#+LaTeX_HEADER: \input{inc/header.doc.tex}
+#+BIND: org-latex-title-command "\\titleHM"
+
+#+BEGIN_ABSTRACT
+Abstract
+#+END_ABSTRACT
+#+LaTeX: \pagebreak
+#+TOC: headlines 3
+#+LaTeX: \statdeclaration
+
+* Kapitel 1
+
+* Fazit
+  
+#+LaTeX: \newpage
+
+bibliography:thesis.bib
+bibliographystyle:ieeetr
+

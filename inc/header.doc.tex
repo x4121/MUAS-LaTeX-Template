@@ -1,6 +1,9 @@
 \usepackage[ngerman]{babel}
+\usepackage[utf8]{inputenc}
 \usepackage[nolist]{acronym}
-\usepackage{hyperref}
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{amssymb}
 \usepackage{multimedia}
 \usepackage{graphicx}
 \usepackage{colortbl}
@@ -8,6 +11,8 @@
 \usepackage{tabularx}
 \usepackage{courier}
 \usepackage{eurosym}
+\usepackage{titling}
+\usepackage[pdfpagelabels=true]{hyperref}
 
 % break urls at "\", "-" and "_"
 \def\UrlBreaks{\do\/\do-\do_}
@@ -32,3 +37,57 @@
 \newcolumntype{C}{>{\centering\arraybackslash}X}
 \newcolumntype{B}[1]{>{\hsize=#1\hsize}X}
 \newcolumntype{L}[1]{>{\raggedright\hsize=#1\hsize}X}
+
+% HM thesis title page
+\newcommand*{\titleHM}{\begingroup
+\pagenumbering{Roman}
+\begin{titlepage}
+\begin{center}
+	\includegraphics[width=0.7\textwidth]{img/hm_logo.png}\\
+	\vspace*{0.4cm}
+	\Large
+	\textbf{Fakultät für Informatik und Mathematik}\\
+	\vspace*{2cm}
+	\huge
+	\textbf{\thesis}\\
+	\vspace*{0.4cm}
+	\large
+	im Studiengang Informatik Master\\
+	über das Thema\\
+	\vspace*{1cm}
+	\Large
+    \textbf{\thetitle}\\
+	\vspace*{3cm}
+	\large
+	\vfill
+    \theauthor\\
+	\vspace*{0.3cm}
+	\thedate\\
+	\vspace*{0.3cm}
+	Prüfer: \prof
+\end{center}
+\end{titlepage}
+\newpage
+\endgroup}
+
+\newcommand*{\statdeclaration}{\begingroup
+\newpage
+\begin{center}
+	\vspace*{5em}
+	\large\textbf{Erklärung}\\
+\end{center}
+\vspace{1em}
+Hiermit erkläre ich, dass ich die \thesis selbständig verfasst, noch nicht anderweitig für Prüfungszwecke vorgelegt,
+keine anderen als die angegebenen Quellen oder Hilfsmittel benutzt sowie wörtliche und sinngemäße Zitate als solche gekennzeichnet habe.
+
+\vspace{3em}
+\begin{minipage}{\linewidth}
+	\begin{tabular}{p{20em}p{15em}}
+		München, den \thedate &  .......................................................\\
+		& \centering \theauthor\\
+	\end{tabular}
+\end{minipage}
+\newpage
+\pagenumbering{arabic}
+\setcounter{page}{1}
+\endgroup}
