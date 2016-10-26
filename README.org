@@ -44,18 +44,21 @@
   - [[emacs.init]] kopieren und als ~/.emacs speichern
   - Zumindest teilweise in [[http://orgmode.org/][org-mode]] und [[https://github.com/jkitchin/org-ref][org-ref]] einlesen
   - Dokumentation/Präsentation schreiben
-  - Dokumentation mit ~C-c C-e l p~ zu PDF kompilieren
-  - Präsentationen mit ~C-c C-e l P~ zu Beamer PDF kompilieren
+  - In Emacs: Dokumentation mit ~C-c C-e l p~ zu PDF kompilieren
+  - In Emacs: Präsentationen mit ~C-c C-e l P~ zu Beamer PDF kompilieren
+  - Alternativ kann man sich in Vim auch ein mapping zu ~:!
+    emacs % -q --load %:p:h/emacs.init --batch -f org-latex-export-to-pdf --kill<cr><cr>~
+    anlegen (bzw. ~org-beamer-export-to-pdf~ für Beamer PDFs)
 * Was geht aktuell schon?
 ** Beamer präsentation
    - Schreiben des Inhalts in org-mode
-   - PDF-Generierung mit nur einem Befehl aus emacs
+   - PDF-Generierung mit nur einem Befehl aus emacs (bzw. Vim)
    - Fußnoten mit inline-LaTeX
    - Abbildungen, Tabellen und Code ohne LaTeX
    - Generierung der Notizen für pdfpc mit inline-LaTeX
 ** Ausarbeitung
    - Schreiben des Inhalts in org-mode
-   - PDF-Generierung mit nur einem Befehl aus emacs
+   - PDF-Generierung mit nur einem Befehl aus emacs (bzw. Vim)
    - Fußnoten/Referenzen mit org-mode oder org-ref
    - Abbildungen, Tabellen und Code ohne LaTeX
 * Was geht noch nicht?
